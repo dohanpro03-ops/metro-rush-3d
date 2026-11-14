@@ -1,0 +1,2400 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#1a0533">
+<title>TABU — Yasak Kelime Oyunu</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='55' r='38' fill='%23ff4757'/><text x='50' y='68' font-size='42' text-anchor='middle' fill='white' font-family='Arial Black'>T</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Nunito:wght@600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg1:#1a0533; --bg2:#2b0a54; --bg3:#3d1066;
+  --red:#ff4757; --red-dark:#d63047; --gold:#ffd32a; --green:#2ed573; --green-dark:#17a860;
+  --card:#fff; --ink:#2f0530; --muted:#b9a3d9;
+  --glass:rgba(255,255,255,.08); --glass2:rgba(255,255,255,.14);
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none}
+html,body{height:100%;overflow:hidden}
+body{
+  font-family:'Nunito',system-ui,sans-serif;
+  background:radial-gradient(120% 90% at 50% -10%, var(--bg3) 0%, var(--bg2) 45%, var(--bg1) 100%);
+  color:#fff; display:flex; justify-content:center; align-items:stretch;
+}
+#app{width:100%;max-width:460px;height:100dvh;position:relative;overflow:hidden}
+
+/* floating cloud background blobs */
+.blob{position:absolute;border-radius:50%;filter:blur(60px);opacity:.35;pointer-events:none;animation:drift 16s ease-in-out infinite alternate}
+.blob.b1{width:260px;height:260px;background:#7b2ff7;top:-70px;left:-90px}
+.blob.b2{width:220px;height:220px;background:#ff4757;bottom:-60px;right:-80px;animation-delay:-6s}
+.blob.b3{width:150px;height:150px;background:#ffd32a;top:38%;left:-70px;opacity:.22;animation-delay:-11s}
+@keyframes drift{from{transform:translateY(-24px) scale(1)}to{transform:translateY(28px) scale(1.12)}}
+
+.screen{position:absolute;inset:0;padding:18px 18px calc(18px + env(safe-area-inset-bottom));display:flex;flex-direction:column;overflow-y:auto;overflow-x:hidden;scrollbar-width:none}
+.screen::-webkit-scrollbar{display:none}
+.hidden{display:none !important}
+
+/* ---------- MENU ---------- */
+.logo-cloud{margin:6px auto 2px;display:flex;flex-direction:column;align-items:center;animation:bob 3.2s ease-in-out infinite}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-9px)}}
+.cloud-svg{filter:drop-shadow(0 10px 22px rgba(255,255,255,.22))}
+h1.title{font-family:'Fredoka';font-weight:700;font-size:64px;line-height:1;letter-spacing:2px;text-align:center;
+  background:linear-gradient(180deg,#fff 20%,#ffd32a 55%,#ff9f2a 100%);-webkit-background-clip:text;background-clip:text;color:transparent;
+  text-shadow:none;margin-top:2px}
+.tagline{text-align:center;color:var(--muted);font-size:13px;margin:2px 0 12px;font-weight:800;letter-spacing:.4px}
+
+.panel{background:var(--glass);border:1px solid var(--glass2);border-radius:22px;padding:14px;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);box-shadow:0 14px 34px rgba(0,0,0,.35)}
+.panel h2{font-family:'Fredoka';font-size:13px;letter-spacing:1.6px;text-transform:uppercase;color:var(--gold);margin:2px 2px 8px;font-weight:600}
+
+.teams-row{display:flex;gap:8px;align-items:center}
+.team-input{flex:1;display:flex;flex-direction:column;gap:4px}
+.team-input label{font-size:10px;letter-spacing:1.2px;color:var(--muted);font-weight:800;text-transform:uppercase}
+.team-input input{width:100%;background:rgba(0,0,0,.35);border:1.5px solid var(--glass2);color:#fff;border-radius:13px;padding:10px 12px;font-size:15px;font-weight:800;font-family:'Nunito';outline:none;transition:border .2s}
+.team-input input:focus{border-color:var(--gold)}
+.vs{font-family:'Fredoka';font-weight:700;color:var(--red);font-size:19px;padding-top:14px}
+
+.chips{display:flex;flex-wrap:wrap;gap:7px}
+.chip{border:1.5px solid var(--glass2);background:rgba(0,0,0,.3);color:#e9ddfb;border-radius:999px;padding:8px 13px;font-size:12.5px;font-weight:800;font-family:'Nunito';cursor:pointer;transition:all .18s}
+.chip.on{background:var(--gold);border-color:var(--gold);color:#3a2700;box-shadow:0 4px 14px rgba(255,211,42,.4)}
+.chip.small{padding:7px 11px;font-size:12px}
+
+.btn{display:block;width:100%;border:none;cursor:pointer;font-family:'Fredoka';font-weight:600;letter-spacing:1px;border-radius:18px;transition:transform .12s, filter .2s}
+.btn:active{transform:scale(.96)}
+.btn-play{font-size:24px;padding:17px;color:#fff;background:linear-gradient(180deg,#ff5f71,var(--red) 60%,var(--red-dark));box-shadow:0 10px 0 #a61f32,0 18px 34px rgba(255,71,87,.45);margin-top:14px}
+.btn-play:active{transform:translateY(6px);box-shadow:0 4px 0 #a61f32,0 8px 18px rgba(255,71,87,.4)}
+
+.menu-foot{display:flex;justify-content:space-between;align-items:center;margin-top:10px;padding:0 2px}
+.linkish{background:none;border:none;color:var(--muted);font-family:'Nunito';font-weight:800;font-size:12px;cursor:pointer;text-decoration:underline}
+.stat-line{font-size:11px;color:var(--muted);font-weight:700}
+
+/* ---------- GAME ---------- */
+.topbar{display:flex;gap:8px;align-items:stretch}
+.team-chip{flex:1;background:var(--glass);border:1.5px solid var(--glass2);border-radius:16px;padding:7px 10px;text-align:center;transition:all .25s;position:relative}
+.team-chip .tname{font-size:10.5px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.team-chip .tscore{font-family:'Fredoka';font-size:30px;font-weight:700;line-height:1.05}
+.team-chip.active{border-color:var(--gold);background:rgba(255,211,42,.13);box-shadow:0 0 0 1.5px var(--gold),0 8px 22px rgba(255,211,42,.18)}
+.team-chip.active .tname{color:var(--gold)}
+.team-chip .turn-dot{position:absolute;top:6px;right:8px;width:9px;height:9px;border-radius:50%;background:var(--gold);box-shadow:0 0 8px var(--gold);display:none}
+.team-chip.active .turn-dot{display:block;animation:blink 1s infinite}
+@keyframes blink{50%{opacity:.3}}
+
+.timer-wrap{display:flex;justify-content:center;align-items:center;margin:8px 0 4px;position:relative}
+.timer-num{position:absolute;font-family:'Fredoka';font-size:44px;font-weight:700}
+.timer-num small{display:block;font-size:10px;letter-spacing:2px;color:var(--muted);text-align:center;font-family:'Nunito';font-weight:800}
+.timer-num.low{color:var(--red);animation:pulse .5s infinite}
+@keyframes pulse{50%{transform:scale(1.18)}}
+.ring-bg{stroke:rgba(255,255,255,.12)}
+.ring-fg{stroke:var(--green);stroke-linecap:round;transition:stroke .3s}
+.ring-fg.low{stroke:var(--red)}
+
+/* the card */
+.card-zone{flex:1;display:flex;align-items:center;justify-content:center;perspective:900px;min-height:0}
+.card{width:100%;max-width:380px;border-radius:26px;overflow:hidden;background:var(--card);color:var(--ink);box-shadow:0 26px 60px rgba(0,0,0,.55),0 0 0 1px rgba(255,255,255,.15) inset;animation:deal .45s cubic-bezier(.2,1.4,.4,1)}
+@keyframes deal{from{transform:rotateY(70deg) translateY(-30px) scale(.7);opacity:0}to{transform:none;opacity:1}}
+.card-top{background:linear-gradient(160deg,#ff5f71 0%,var(--red) 45%,#c2293c 100%);padding:16px 14px 13px;text-align:center;position:relative}
+.card-cat{font-size:9.5px;letter-spacing:2.4px;text-transform:uppercase;color:rgba(255,255,255,.85);font-weight:800}
+.target{font-family:'Fredoka';font-weight:700;font-size:clamp(26px,8.4vw,40px);color:#fff;line-height:1.15;margin-top:6px;text-shadow:0 3px 0 rgba(0,0,0,.18);word-break:break-word}
+.card-bottom{background:#fff;padding:12px 12px 14px}
+.forbid-title{font-size:9px;letter-spacing:2.2px;color:#c2293c;font-weight:800;text-align:center;margin-bottom:8px}
+.forbid{list-style:none;display:flex;flex-direction:column;gap:7px}
+.forbid li{display:flex;align-items:center;gap:10px;background:#ffe3e7;border:1px solid #ffc2cb;border-radius:12px;padding:8px 12px;font-weight:800;font-size:15.5px;color:#5a0e1a}
+.fx{flex:0 0 20px;height:20px;border-radius:50%;background:#c2293c;color:#fff;font-size:12px;display:flex;align-items:center;justify-content:center;font-weight:900}
+
+/* action buttons */
+.actions{display:flex;gap:9px;margin-top:10px}
+.act{flex:1;border:none;border-radius:20px;padding:13px 6px 12px;cursor:pointer;font-family:'Fredoka';font-weight:600;letter-spacing:.6px;display:flex;flex-direction:column;align-items:center;gap:2px;transition:transform .12s, filter .2s;box-shadow:0 6px 0 rgba(0,0,0,.28)}
+.act:active{transform:translateY(4px);box-shadow:0 2px 0 rgba(0,0,0,.28)}
+.act .big{font-size:19px}
+.act .sub{font-family:'Nunito';font-size:9.5px;font-weight:800;opacity:.85;letter-spacing:.4px}
+.act-pass{background:linear-gradient(180deg,#ffd32a,#f5b90d);color:#4a3000}
+.act-buzz{background:linear-gradient(180deg,#ff6b6b,var(--red));color:#fff}
+.act-ok{background:linear-gradient(180deg,#3ef58b,var(--green-dark));color:#04331c}
+.act-buzz .big,.act-ok .big{font-size:25px;line-height:1}
+.passes-left{text-align:center;font-size:11px;font-weight:800;color:var(--muted);margin-top:7px;min-height:14px}
+.passes-left b{color:var(--gold)}
+
+.quit-btn{position:absolute;top:calc(10px + env(safe-area-inset-top));right:12px;background:rgba(0,0,0,.4);border:1px solid var(--glass2);color:#cbb9ea;border-radius:12px;font-size:11px;font-weight:800;padding:6px 10px;cursor:pointer;z-index:5}
+
+/* ---------- INTERSTITIAL ---------- */
+.inter{justify-content:center;align-items:center;text-align:center;gap:8px}
+.inter .big-team{font-family:'Fredoka';font-size:44px;font-weight:700;background:linear-gradient(180deg,#fff,var(--gold));-webkit-background-clip:text;background-clip:text;color:transparent;line-height:1.15}
+.inter p{color:var(--muted);font-weight:800;max-width:280px}
+.inter .score-now{font-family:'Fredoka';font-size:19px;color:#fff;background:var(--glass);border:1px solid var(--glass2);border-radius:16px;padding:10px 22px;margin:6px 0}
+.btn-gold{font-size:20px;padding:15px;background:linear-gradient(180deg,#ffe066,var(--gold) 60%,#eab308);color:#3a2700;box-shadow:0 8px 0 #a9790a,0 14px 30px rgba(255,211,42,.35)}
+.btn-gold:active{transform:translateY(5px);box-shadow:0 3px 0 #a9790a}
+.pulse-ring{animation:ringpulse 1.6s ease-out infinite}
+@keyframes ringpulse{0%{box-shadow:0 0 0 0 rgba(255,211,42,.5)}100%{box-shadow:0 0 0 22px rgba(255,211,42,0)}}
+
+/* ---------- GAME OVER ---------- */
+.over{justify-content:center;align-items:center;text-align:center;gap:6px}
+.trophy{font-size:0;margin-bottom:2px;animation:bob 2.4s ease-in-out infinite}
+.winner-name{font-family:'Fredoka';font-size:37px;font-weight:700;color:var(--gold);line-height:1.15;text-shadow:0 0 34px rgba(255,211,42,.4)}
+.winner-sub{color:var(--muted);font-weight:800;letter-spacing:2px;text-transform:uppercase;font-size:11px}
+.final-scores{display:flex;gap:12px;margin:10px 0}
+.final-box{background:var(--glass);border:1px solid var(--glass2);border-radius:18px;padding:12px 20px;min-width:120px}
+.final-box.win{border-color:var(--gold);box-shadow:0 0 24px rgba(255,211,42,.25)}
+.final-box .fs-name{font-size:11px;color:var(--muted);font-weight:800;text-transform:uppercase;letter-spacing:1px}
+.final-box .fs-num{font-family:'Fredoka';font-size:44px;font-weight:700}
+.over-stats{font-size:12px;color:var(--muted);font-weight:700}
+.btn-row{display:flex;gap:10px;width:100%;margin-top:10px}
+.btn-secondary{background:var(--glass2);color:#fff;box-shadow:0 6px 0 rgba(0,0,0,.3)}
+.btn-secondary:active{transform:translateY(4px);box-shadow:0 2px 0 rgba(0,0,0,.3)}
+
+/* toast */
+#toast{position:absolute;bottom:110px;left:50%;transform:translateX(-50%) translateY(20px);background:#000d;border:1px solid var(--glass2);color:#ffd9de;padding:10px 18px;border-radius:14px;font-weight:800;font-size:13px;opacity:0;pointer-events:none;transition:all .25s;z-index:50;white-space:nowrap}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* flash overlay for düdük */
+#flash{position:absolute;inset:0;background:radial-gradient(circle,rgba(255,0,0,.28),rgba(255,0,0,.5));opacity:0;pointer-events:none;z-index:40;transition:opacity .18s}
+#flash.show{opacity:1}
+
+/* rules modal */
+#rulesModal{position:absolute;inset:0;background:rgba(10,2,24,.82);z-index:60;display:flex;align-items:center;justify-content:center;padding:22px}
+.rules-card{background:#241040;border:1px solid var(--glass2);border-radius:24px;padding:22px;max-height:80dvh;overflow-y:auto}
+.rules-card h3{font-family:'Fredoka';color:var(--gold);margin-bottom:10px;font-size:21px}
+.rules-card li{margin:6px 0 6px 18px;font-size:13.5px;color:#e6dbf7;font-weight:600}
+.rules-card b{color:#fff}
+#confetti{position:absolute;inset:0;pointer-events:none;z-index:55}
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div>
+
+  <!-- ============ MENU ============ -->
+  <section id="screen-menu" class="screen">
+    <div class="logo-cloud">
+      <svg class="cloud-svg" width="96" height="66" viewBox="0 0 96 66">
+        <g fill="#ffffff">
+          <circle cx="26" cy="44" r="16"/><circle cx="46" cy="28" r="20"/><circle cx="68" cy="44" r="15"/><rect x="12" y="40" width="72" height="20" rx="10"/>
+        </g>
+        <circle cx="38" cy="40" r="3.4" fill="#1a0533"/><circle cx="58" cy="40" r="3.4" fill="#1a0533"/>
+      </svg>
+    </div>
+    <h1 class="title">TABU</h1>
+    <p class="tagline">YASAK KELİMELERE DİKKAT · ANLAT BAKALIM</p>
+
+    <div class="panel" style="margin-bottom:10px">
+      <h2>Takımlar</h2>
+      <div class="teams-row">
+        <div class="team-input"><label for="t1name">Takım 1</label><input id="t1name" maxlength="16" value="Takım 1" autocomplete="off"></div>
+        <div class="vs">VS</div>
+        <div class="team-input"><label for="t2name">Takım 2</label><input id="t2name" maxlength="16" value="Takım 2" autocomplete="off"></div>
+      </div>
+    </div>
+
+    <div class="panel" style="margin-bottom:10px">
+      <h2>Zorluk Seviyesi</h2>
+      <div class="chips" id="difficultyChips">
+        <button class="chip" data-d="0">Kolay</button>
+        <button class="chip on" data-d="1">Orta</button>
+        <button class="chip" data-d="2">Zor</button>
+        <button class="chip" data-d="all">Karışık</button>
+      </div>
+      <h2 style="margin-top:12px">Kategori</h2>
+      <div class="chips" id="categoryChips">
+        <button class="chip small on" data-c="all">Tümü</button>
+        <button class="chip small" data-c="genel">Genel</button>
+        <button class="chip small" data-c="kültür">Tarih &amp; Kültür</button>
+        <button class="chip small" data-c="bilim">Bilim &amp; Doğa</button>
+        <button class="chip small" data-c="yemek">Yemek</button>
+        <button class="chip small" data-c="hayvan">Hayvanlar</button>
+        <button class="chip small" data-c="spor">Spor</button>
+        <button class="chip small" data-c="sanat">Sanat</button>
+        <button class="chip small" data-c="teknoloji">Teknoloji</button>
+        <button class="chip small" data-c="ev">Ev &amp; Yaşam</button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Oyun Ayarları</h2>
+      <div class="chips" style="margin-bottom:10px">
+        <span style="font-size:11px;font-weight:800;color:var(--muted);width:100%;letter-spacing:1px">SÜRE</span>
+        <button class="chip small" data-time="30">30sn</button>
+        <button class="chip small on" data-time="60">60sn</button>
+        <button class="chip small" data-time="90">90sn</button>
+        <button class="chip small" data-time="120">120sn</button>
+      </div>
+      <div class="chips" style="margin-bottom:10px">
+        <span style="font-size:11px;font-weight:800;color:var(--muted);width:100%;letter-spacing:1px">PAS HAKKI</span>
+        <button class="chip small" data-pass="0">0</button>
+        <button class="chip small" data-pass="1">1</button>
+        <button class="chip small" data-pass="2">2</button>
+        <button class="chip small on" data-pass="3">3</button>
+        <button class="chip small" data-pass="5">5</button>
+      </div>
+      <div class="chips">
+        <span style="font-size:11px;font-weight:800;color:var(--muted);width:100%;letter-spacing:1px">BİTİŞ PUANI</span>
+        <button class="chip small" data-target="10">10</button>
+        <button class="chip small" data-target="20">20</button>
+        <button class="chip small on" data-target="30">30</button>
+        <button class="chip small" data-target="50">50</button>
+      </div>
+    </div>
+
+    <button class="btn btn-play" id="startBtn">OYNA</button>
+    <div class="menu-foot">
+      <button class="linkish" id="rulesBtn">Nasıl Oynanır?</button>
+      <span class="stat-line" id="menuStats"></span>
+    </div>
+  </section>
+
+  <!-- ============ GAME ============ -->
+  <section id="screen-game" class="screen hidden">
+    <button class="quit-btn" id="quitBtn">BİTİR</button>
+    <div class="topbar">
+      <div class="team-chip active" id="chip0"><span class="turn-dot"></span><div class="tname">Takım 1</div><div class="tscore">0</div></div>
+      <div class="team-chip" id="chip1"><span class="turn-dot"></span><div class="tname">Takım 2</div><div class="tscore">0</div></div>
+    </div>
+
+    <div class="timer-wrap">
+      <svg width="132" height="132" viewBox="0 0 132 132">
+        <circle class="ring-bg" cx="66" cy="66" r="56" stroke-width="11" fill="none"/>
+        <circle class="ring-fg" id="ringFg" cx="66" cy="66" r="56" stroke-width="11" fill="none"
+                stroke-dasharray="351.86" stroke-dashoffset="0" transform="rotate(-90 66 66)"/>
+      </svg>
+      <div class="timer-num" id="timerNum">60<small>SANİYE</small></div>
+    </div>
+
+    <div class="card-zone">
+      <div class="card" id="gameCard">
+        <div class="card-top">
+          <div class="card-cat" id="cardCat">GENEL</div>
+          <div class="target" id="targetWord">KELİME</div>
+        </div>
+        <div class="card-bottom">
+          <div class="forbid-title">— BU KELİMELERİ KULLANMA —</div>
+          <ul class="forbid" id="forbidList"></ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button class="act act-pass" id="passBtn"><span class="big">PAS</span><span class="sub" id="passSub">3 hak kaldı</span></button>
+      <button class="act act-buzz" id="buzzBtn"><span class="big">Düdük!</span><span class="sub">−1 puan</span></button>
+      <button class="act act-ok" id="okBtn"><span class="big">DOĞRU</span><span class="sub">+1 puan</span></button>
+    </div>
+    <div class="passes-left" id="passesLeft"></div>
+  </section>
+
+  <!-- ============ INTERSTITIAL (sıra devri) ============ -->
+  <section id="screen-inter" class="screen inter hidden">
+    <div class="logo-cloud" style="animation-duration:2.2s">
+      <svg class="cloud-svg" width="70" height="50" viewBox="0 0 96 66">
+        <g fill="#ffffff"><circle cx="26" cy="44" r="16"/><circle cx="46" cy="28" r="20"/><circle cx="68" cy="44" r="15"/><rect x="12" y="40" width="72" height="20" rx="10"/></g>
+        <circle cx="38" cy="40" r="3.4" fill="#1a0533"/><circle cx="58" cy="40" r="3.4" fill="#1a0533"/>
+      </svg>
+    </div>
+    <p id="interLabel">SIRA DEĞİŞTİ</p>
+    <div class="big-team" id="interTeam">Takım 2</div>
+    <div class="score-now" id="interScore">0 – 0</div>
+    <p>Telefonu anlatıcıya uzatın. Kartı sadece <b>anlatıcı</b> görsün!</p>
+    <button class="btn btn-gold pulse-ring" id="readyBtn" style="max-width:280px">HAZIRIM</button>
+  </section>
+
+  <!-- ============ GAME OVER ============ -->
+  <section id="screen-over" class="screen over hidden">
+    <canvas id="confetti"></canvas>
+    <svg class="trophy" width="110" height="110" viewBox="0 0 110 110">
+      <path d="M30 12h50v14a25 25 0 0 1-8.4 18.6A26 26 0 0 1 56 55v6h10a6 6 0 0 1 6 6v4H38v-4a6 6 0 0 1 6-6h10v-6A26 26 0 0 1 38.4 44.6A25 25 0 0 1 30 26V12z" fill="#ffd32a" stroke="#e0a800" stroke-width="3" stroke-linejoin="round"/>
+      <path d="M30 20h-9a4 4 0 0 0-4 4 16 16 0 0 0 14 15.8M80 20h9a4 4 0 0 1 4 4 16 16 0 0 1-14 15.8" fill="none" stroke="#e0a800" stroke-width="5" stroke-linecap="round"/>
+      <rect x="34" y="74" width="42" height="8" rx="3" fill="#ffd32a" stroke="#e0a800" stroke-width="3"/>
+      <rect x="28" y="84" width="54" height="8" rx="3" fill="#ffb700" stroke="#e0a800" stroke-width="3"/>
+    </svg>
+    <div class="winner-sub">KAZANAN</div>
+    <div class="winner-name" id="winnerName">Takım 1</div>
+    <div class="final-scores">
+      <div class="final-box" id="finalBox0"><div class="fs-name">Takım 1</div><div class="fs-num">0</div></div>
+      <div class="final-box" id="finalBox1"><div class="fs-name">Takım 2</div><div class="fs-num">0</div></div>
+    </div>
+    <div class="over-stats" id="overStats"></div>
+    <div class="btn-row">
+      <button class="btn btn-secondary" id="menuBtn" style="font-size:16px;padding:14px">Menü</button>
+      <button class="btn btn-gold" id="rematchBtn" style="font-size:16px;padding:14px">Rövanş</button>
+    </div>
+  </section>
+
+  <div id="toast"></div>
+  <div id="flash"></div>
+
+  <!-- rules modal -->
+  <div id="rulesModal" class="hidden">
+    <div class="rules-card">
+      <h3>Nasıl Oynanır?</h3>
+      <ul>
+        <li>Oyuncular <b>2 takıma</b> ayrılır. Her turda bir takımın <b>anlatıcısı</b> telefonu alır.</li>
+        <li>Anlatıcı, kartta yazan <b>hedef kelimeyi</b> takımına anlatmaya çalışır — ama karttaki <b>5 yasak kelimeyi</b> asla söyleyemez (türevleri de yasak!).</li>
+        <li>Hedef kelimeyi hecelemek, harf harf söylemek ve kelimeye kafiye yapan kelimeler de <b>yasaktır</b>.</li>
+        <li>Takım doğru bilirse <b>DOĞRU</b> düğmesine basılır: <b>+1 puan</b>.</li>
+        <li>Pas hakkın varsa <b>PAS</b> diyebilirsin; kelimeyi atlarsın ama puan alamazsın.</li>
+        <li>Yasak kelimeyi söylersen karşı takım <b>DÜDÜK</b> çalar: <b>−1 puan</b> ve kart atlanır.</li>
+        <li>Süre bitince sıra diğer takıma geçer. <b>Bitiş puanına</b> ilk ulaşan oyunu kazanır!</li>
+      </ul>
+      <button class="btn btn-gold" id="closeRules" style="margin-top:12px;font-size:16px;padding:12px">ANLADIM</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   TABU — Yasak Kelime Oyunu
+   Kelime bankası gerçek internet listelerinden derlendi:
+   - nejdetkadir/turkish-taboo-words (MIT) — data/words.json
+   - xUmutKx/Taboo_J2me (MIT) — TabuData.java, 1170 kart
+   + elle derlenen Türkçe yasak kelimeler
+   Toplam 1779 kart. Her oyun havuzu yeniden karıştırılır;
+   kartlar bitene kadar tekrar etmez.
+   ============================================================ */
+const WORDS = [
+{w:'KÖPEK',f:['EVCİL HAYVAN','HAVLAMA','KUYRUK SALLAYAN','SADIK','TASMA'],t:0,c:'hayvan'},
+{w:'PASTA',f:['TATLI','DOĞUM GÜNÜ','KREMA','DİLİM','ŞEKERLİ'],t:0,c:'yemek'},
+{w:'GÜNEŞ',f:['YILDIZ','GÖKYÜZÜ','ISI','SARI','GÜN IŞIĞI'],t:0,c:'bilim'},
+{w:'ARABA',f:['ARAÇ','SÜRÜCÜ','YOL','MOTOR','TEKERLEK'],t:0,c:'genel'},
+{w:'TABURE',f:['KOLTUK','MOBİLYA','OTURMAK','AYAK','İSKEMLE'],t:0,c:'ev'},
+{w:'KİTAP',f:['OKUMA','HİKÂYE','SAYFA','YAZAR','KÜTÜPHANE'],t:0,c:'kültür'},
+{w:'PİZZA',f:['YİYECEK','PEYNİR','DİLİM','HAMUR','SOS'],t:0,c:'yemek'},
+{w:'AĞAÇ',f:['BİTKİ','YAPRAK','AHŞAP','ORMAN','KÖK'],t:0,c:'bilim'},
+{w:'TOP',f:['YUVARLAK','ZIPLAMAK','OYNAMAK','SPOR','ATMAK'],t:0,c:'spor'},
+{w:'TELEFON',f:['GÖRÜŞME','MOBİL','MESAJ','ARAMA','SES'],t:0,c:'teknoloji'},
+{w:'KAPI',f:['GİRİŞ','AÇMAK','KAPATMAK','KİLİT','ANAHTAR'],t:0,c:'ev'},
+{w:'KEDİ',f:['MİYAV','TÜY','MIRLAMA','PENÇE','EVCİL HAYVAN'],t:0,c:'hayvan'},
+{w:'EV',f:['HANE','BİNA','ÇATI','DUVARLAR','PENCERE'],t:0,c:'ev'},
+{w:'KALEM',f:['YAZMAK','MÜREKKEP','KAĞIT','UÇ','DEFTER'],t:0,c:'genel'},
+{w:'ANAHTAR',f:['KİLİTLEME','KAPI','KİLİT','AÇMAK','ÇEVİRME'],t:0,c:'ev'},
+{w:'BALIK',f:['YÜZME','SU','YÜZGEÇ','AKVARYUM','DENİZ'],t:0,c:'hayvan'},
+{w:'ŞAPKA',f:['BAŞLIK','KASKET','GÜNEŞ','GİYSİ','AKSESUAR'],t:0,c:'genel'},
+{w:'MASA',f:['MOBİLYA','YEMEK','YÜZEY','ÇALIŞMAK','AYAK'],t:0,c:'ev'},
+{w:'ÇİÇEK',f:['BİTKİ','YAPRAK','BAHÇE','RENK','KOKLAMAK'],t:0,c:'bilim'},
+{w:'SAAT',f:['ZAMAN','YELKOVAN','ALARM','AKREP','RAKAMLAR'],t:0,c:'ev'},
+{w:'SANDALYE',f:['OTURMAK','MOBİLYA','AYAK','SIRTLIK','YASTIK'],t:0,c:'ev'},
+{w:'BARDAK',f:['İÇECEK','KUPA','SAP','CAM','SU'],t:0,c:'ev'},
+{w:'LAMBA',f:['AMPUL','GÖLGE','AYDINLATMA','ELEKTRİK','ABAJUR'],t:0,c:'ev'},
+{w:'AYAKKABI',f:['ÇORAP','TABAN','BAĞCIK','YÜRÜMEK','GİYMEK'],t:0,c:'genel'},
+{w:'GÖMLEK',f:['GİYSİ','GİYMEK','YAKA','KETEN','ÜTÜ'],t:0,c:'genel'},
+{w:'KAŞIK',f:['YEMEK','KARIŞTIRMA','GÜMÜŞ','ÇORBA','TATLI'],t:0,c:'ev'},
+{w:'ELMA',f:['MEYVE','KIRMIZI','GEVREK','AĞAÇ','YEŞİL'],t:0,c:'yemek'},
+{w:'PENCERE',f:['CAM','MANZARA','ÇERÇEVE','AÇMAK','KAPATMAK'],t:0,c:'ev'},
+{w:'ÇANTA',f:['TAŞIMA','SIRT','KOL','OKUL','EL'],t:0,c:'genel'},
+{w:'PORTAKAL',f:['MEYVE','NARENCİYE','KABUK','TURUNCU','TATLI'],t:0,c:'yemek'},
+{w:'YATAK',f:['UYUMAK','YATMAK','DİNLENMEK','YORGAN','YASTIK'],t:0,c:'ev'},
+{w:'KOLTUK',f:['SANDALYE','MOBİLYA','RAHATLIK','SALON','OTURMAK'],t:0,c:'ev'},
+{w:'FUTBOL TOPU',f:['SPOR','ATMA','YAKALAMA','YUVARLAK','RONALDO'],t:0,c:'spor'},
+{w:'GİTAR',f:['ENSTRÜMAN','TEL','MÜZİK','AKOR','ÇALMAK'],t:0,c:'sanat'},
+{w:'ÖRDEK',f:['GAGA','SU','TÜY','KUĞU','YÜZMEK'],t:0,c:'hayvan'},
+{w:'EKMEK',f:['YEMEK','DİLİM','SOMUN','FIRIN','TOST'],t:0,c:'yemek'},
+{w:'KUŞ',f:['KANAT','UÇMAK','TÜY','GÖÇ','YUVA'],t:0,c:'hayvan'},
+{w:'ÇİKOLATA',f:['TATLI','KAHVERENGİ','KAKAO','BAR','BİTTER'],t:0,c:'yemek'},
+{w:'DENİZ',f:['TUZLU','DALGA','KUMSAL','SU','ISLAK'],t:0,c:'bilim'},
+{w:'MEKTUP',f:['YAZMAK','POSTA','ZARF','MESAJ','PUL'],t:0,c:'genel'},
+{w:'VOLKAN',f:['PATLAMA','LAV','KRATER','MAGMA','SICAK'],t:2,c:'bilim'},
+{w:'RÖNESANS',f:['SANAT','YENİDEN DOĞUŞ','İTALYA','ORTAÇAĞ','DA VİNCİ'],t:2,c:'kültür'},
+{w:'DİNOZOR',f:['SOYU TÜKENMİŞ','FOSİL','JURA','SÜRÜNGEN','EVRİM'],t:2,c:'bilim'},
+{w:'GÜNEŞ SİSTEMİ',f:['GEZEGEN','AY','YÖRÜNGE','UZAY','GALAKSİ'],t:2,c:'bilim'},
+{w:'DEVRİM',f:['DEĞİŞİM','İSYAN','PROTESTO','AYAKLANMA','YENİLİK'],t:2,c:'tarih'},
+{w:'TSUNAMİ',f:['DALGA','OKYANUS','FELAKET','DEPREM','KASIRGA'],t:2,c:'bilim'},
+{w:'PİCASSO',f:['SANATÇI','KÜBİZM','RESİM','İSPANYA','RESSAM'],t:2,c:'sanat'},
+{w:'SENFONİ',f:['MÜZİK','ORKESTRA','ŞEF','BEETHOVEN','ENSTRÜMAN'],t:2,c:'sanat'},
+{w:'DEMOKRASİ',f:['HÜKÜMET','OYLAMA','ÖZGÜRLÜK','HALK','EŞİTLİK'],t:2,c:'tarih'},
+{w:'ÖZGÜRLÜK HEYKELİ',f:['NEW YORK','MEŞALE','SEMBOL','HÜRRİYET','AMERİKA'],t:2,c:'tarih'},
+{w:'YERÇEKİMİ',f:['KUVVET','ELMA','NEWTON','FİZİK','KÜTLE'],t:2,c:'bilim'},
+{w:'SHAKESPEARE',f:['OYUN YAZARI','SONE','TRAGEDYA','İNGİLTERE','TİYATRO'],t:2,c:'sanat'},
+{w:'BUZUL',f:['SU','ERİME','KUTUP','DONMUŞ','TİTANİK'],t:2,c:'bilim'},
+{w:'MONA LİSA',f:['RESİM','GÜLÜMSEME','DA VİNCİ','LOUVRE','RÖNESANS'],t:2,c:'sanat'},
+{w:'BİLGİSAYAR',f:['TEKNOLOJİ','İNTERNET','CİHAZ','YAZILIM','KOD'],t:2,c:'teknoloji'},
+{w:'EYFEL KULESİ',f:['PARİS','OLİMPİYAT','ÇELİK','FRANSA','DEMİR'],t:2,c:'tarih'},
+{w:'ÇÖL',f:['KUM','SICAK','KURAK','KURU','VAHA'],t:2,c:'bilim'},
+{w:'EMPIRE STATE BİNASI',f:['NEW YORK','GÖKDELEN','GÖZLEM','YÜKSEK','AMERİKA'],t:2,c:'tarih'},
+{w:'BUZUKİ',f:['ENSTRÜMAN','TEL','MÜZİK','ÇALMAK','YUNAN'],t:2,c:'sanat'},
+{w:'AMAZON YAĞMUR ORMANLARI',f:['BREZİLYA','BİYOÇEŞİTLİLİK','TROPİKAL','EKOSİSTEM','GÜNEY AMERİKA'],t:2,c:'bilim'},
+{w:'MOZART',f:['BESTECİ','KLASİK','PİYANO','AVUSTURYA','BEETHOVEN'],t:2,c:'sanat'},
+{w:'İNTERNET',f:['AĞ','BAĞLANTI','BİLGİ','ÇEVRİMİÇİ','KOTA'],t:2,c:'teknoloji'},
+{w:'EVEREST',f:['DAĞ','ZİRVE','NEPAL','TIRMANMAK','YÜKSEK'],t:2,c:'bilim'},
+{w:'METRO',f:['TAŞIMA','YERALTI','TREN','VAGON','PERON'],t:2,c:'genel'},
+{w:'BAĞIMSIZLIK BİLDİRGESİ',f:['AMERİKA','ÖZGÜRLÜK','BELGE','1776','HAK'],t:2,c:'tarih'},
+{w:'YILDIZLI GECE',f:['RESİM','VAN GOGH','GÖKYÜZÜ','SANAT ESERİ','FIRÇA'],t:2,c:'sanat'},
+{w:'PİRAMİTLER',f:['MISIR','FİRAVUN','MEZAR','ANTİK','KLEOPATRA'],t:2,c:'tarih'},
+{w:'DA VİNCİ',f:['RESİM','MONA LİSA','MÜHENDİS','RÖNESANS','GÖZLEMCİ'],t:2,c:'sanat'},
+{w:'KIZIL HAÇ',f:['İNSANİ','YARDIM','KURTARMA','ACİL','SAĞLIK'],t:2,c:'genel'},
+{w:'ÇİN SEDDİ',f:['TARİH','DUVAR','SAVUNMA','KALE','MİMARİ'],t:2,c:'tarih'},
+{w:'HOLLYWOOD',f:['FİLM','YILDIZ','KALİFORNİYA','ŞÖHRET','AKTÖR'],t:2,c:'sanat'},
+{w:'EİNSTEİN',f:['BİLİM İNSANI','TEORİ','GÖRELİLİK','DAHİ','FİZİK'],t:2,c:'bilim'},
+{w:'BÜYÜK SET RESİFİ',f:['AVUSTRALYA','MERCAN','DENİZ','OKYANUS','DOĞAL YAŞAM'],t:2,c:'bilim'},
+{w:'II. DÜNYA SAVAŞI',f:['ÇATIŞMA','MÜTTEFİKLER','MİHVER','1939','HİTLER'],t:2,c:'tarih'},
+{w:'APOLLO 11',f:['AY','İNİŞ','ARMSTRONG','UZAY','ASTRONOT'],t:2,c:'tarih'},
+{w:'BUDA',f:['DİN','AYDINLANMA','SİDDHARTHA GAUTAMA','MEDİTASYON','BUDİZM'],t:2,c:'kültür'},
+{w:'KOLEZYUM',f:['ROMA','GLADYATÖR','ARENA','ANTİK','TARİH'],t:2,c:'tarih'},
+{w:'TİTANİK',f:['GEMİ','FELAKET','BUZDAĞI','OKYANUS','LEONARDO Dİ CAPRİO'],t:2,c:'tarih'},
+{w:'FUTBOL',f:['SPOR','TOP','GOL','SAHA','MESSİ'],t:1,c:'spor'},
+{w:'NEW YORK',f:['ÖZGÜRLÜK HEYKELİ','WALL STREET','AMERİKA','CENTRAL PARK','TİMES MEYDANI'],t:1,c:'tarih'},
+{w:'HECE',f:['KELİME','HARF','SES','OKUMAK','YAZI'],t:1,c:'kültür'},
+{w:'KÜSMEK',f:['DARILMAK','KIZMAK','KONUŞMAK','TARTIŞMAK','KAVGA'],t:1,c:'genel'},
+{w:'AVİZE',f:['LAMBA','KRİSTAL','TAVAN','IŞIK','AYDINLIK'],t:1,c:'ev'},
+{w:'TERİM',f:['KELİME','ANLAM','BİLİM','SANAT','KAVRAM'],t:1,c:'kültür'},
+{w:'SOYUT',f:['DUYU','ALGILAMAK','GÖRÜLMEYEN','İSİM','SOMUT'],t:1,c:'kültür'},
+{w:'BASKÜL',f:['TARTI','KİLO','AĞIR','ÖLÇÜ','HAFİF'],t:1,c:'ev'},
+{w:'ARMAĞAN',f:['HEDİYE','VERMEK','ALMAK','DOĞUM GÜNÜ','SEVİNDİRMEK'],t:1,c:'genel'},
+{w:'ANTİKA',f:['MÜZAYEDE','ZENGİN','ESKİ','TABLO','TARİHİ'],t:1,c:'genel'},
+{w:'SATRANÇ',f:['ŞAH-MAT','KALE','VEZİR','PİYON','FİL'],t:1,c:'genel'},
+{w:'PARAŞÜT',f:['UÇAK','ATLAMAK','UÇMAK','BALON','HAVA'],t:1,c:'spor'},
+{w:'TİYATRO',f:['OYUNCU','SAHNE','PERDE','OYUN','SUFLÖR'],t:1,c:'sanat'},
+{w:'DOST',f:['GÜVEN','SAMİMİ','DÜRÜST','ARKADAŞ','AHLAKLI'],t:1,c:'genel'},
+{w:'BONKÖR',f:['ELİ AÇIK','CÖMERT','PARA','GÖNLÜ ZENGİN','HARCAMAK'],t:1,c:'genel'},
+{w:'FİDAN',f:['AĞAÇ','BÜYÜMEK','KÜÇÜK','ORMAN','DİKMEK'],t:1,c:'bilim'},
+{w:'PRATİK',f:['KOLAY','ZEKÂ','ÇABUK','HIZLI','ÇÖZÜM'],t:1,c:'genel'},
+{w:'MESAİ',f:['SAAT','İŞ','FAZLA','AKŞAM','KALMAK'],t:1,c:'genel'},
+{w:'BAMBU',f:['SAZLIK','MOBİLYA','AĞAÇ','MASA','SANDALYE'],t:1,c:'bilim'},
+{w:'YABANİ',f:['VAHŞİ','İLKEL','HAYAT','ORMAN','HAYVAN'],t:1,c:'hayvan'},
+{w:'YELPAZE',f:['SICAK','RÜZGÂR','YAZ','KADIN','SALLAMAK'],t:1,c:'ev'},
+{w:'ÇUVAL',f:['TORBA','DOLDURMAK','YEM','UN','KOYMAK'],t:1,c:'ev'},
+{w:'AJANDA',f:['DEFTER','İŞ','YAZMAK','GÜN','TOPLANTI'],t:1,c:'genel'},
+{w:'İŞTAH',f:['ACIKMAK','KESİLMEK','AÇMAK','LEZZET','YEMEK'],t:1,c:'yemek'},
+{w:'İHALE',f:['BELEDİYE','GİRMEK','AÇMAK','YOLSUZLUK','KAZANMAK'],t:1,c:'genel'},
+{w:'HİLE',f:['ALDATMAK','KANDIRMAK','OYUN','YAPMAK','KUMAR'],t:1,c:'genel'},
+{w:'HALAY',f:['DÜĞÜN','ÇEKMEK','OYNAMAK','MENDİL','MAHMUT TUNCER'],t:1,c:'kültür'},
+{w:'PLAKET',f:['ÖDÜL','TÖREN','BAŞARI','VERMEK','TEŞEKKÜR'],t:1,c:'genel'},
+{w:'STAJ',f:['ÖĞRENCİ','ÇALIŞMAK','ÜNİVERSİTE','TECRÜBE','İŞ'],t:1,c:'genel'},
+{w:'TECRÜBE',f:['İŞ','KAZANMAK','ÇALIŞMAK','DENEYİM','YIL'],t:1,c:'genel'},
+{w:'MACUN',f:['CAM','PENCERE','TUTMAK','DİŞ','MESİR'],t:1,c:'ev'},
+{w:'MIZIKÇI',f:['ÇOCUK','KÜSMEK','DARILMAK','BOZMAK','OYUN'],t:1,c:'genel'},
+{w:'ÇAVDAR',f:['ARPA','TAHIL','BUĞDAY','KEPEK','EKMEK'],t:1,c:'yemek'},
+{w:'VERESİYE',f:['PEŞİN','BORÇ','SATIN ALMAK','ÖDEMEK','DEFTER'],t:1,c:'genel'},
+{w:'PERFORMANS',f:['DEĞERLENDİRME','BAŞARI','DERS','ÖDEV','YÜKSEK'],t:1,c:'genel'},
+{w:'MONOTON',f:['AYNI','SIKICI','SIRADAN','BENZER','RUTİN'],t:1,c:'kültür'},
+{w:'PORSİYON',f:['YEMEK','TABAK','LOKANTA','YARIM','RESTORAN'],t:1,c:'yemek'},
+{w:'SERVET',f:['KAZANMAK','ZENGİNLİK','MAL','MÜLK','PARA'],t:1,c:'genel'},
+{w:'ÇAMAŞIR',f:['KİRLİ','YIKAMAK','MAKİNE','DETERJAN','GİYMEK'],t:1,c:'ev'},
+{w:'MİÇO',f:['TAYFA','GEMİ','KAPTAN','DENİZ','YARDIMCI'],t:1,c:'genel'},
+{w:'ESKİMO',f:['KUTUP','BUZUL','KAR','SOĞUK','BALIK'],t:1,c:'kültür'},
+{w:'HASIR',f:['SEPET','ŞAPKA','PLAJ','DENİZ','SERMEK'],t:1,c:'genel'},
+{w:'BUKALEMUN',f:['HAYVAN','RENK','KERTENKELE','DEĞİŞMEK','SÜRÜNGEN'],t:1,c:'hayvan'},
+{w:'KONVOY',f:['ARABA','GİTMEK','DİZİLMEK','ARKA','DÜĞÜN'],t:1,c:'genel'},
+{w:'VEZNE',f:['BANKA','PARA','ÖDEME','ALMAK','MUHASEBE'],t:1,c:'genel'},
+{w:'CEPHE',f:['SAVAŞ','ORDU','ASKER','SALDIRMAK','BARIŞ'],t:1,c:'tarih'},
+{w:'ZİRAAT',f:['TARIM','ÇİFTÇİ','TOPRAK','HAYVAN','BANKA'],t:1,c:'bilim'},
+{w:'FABL',f:['HAYVAN','LA FONTAINE','MASAL','İNSAN','HİKAYE'],t:1,c:'kültür'},
+{w:'PARAGRAF',f:['SINAV','SORU','ANA DÜŞÜNCE','YARDIMCI DÜŞÜNCE','METİN'],t:1,c:'kültür'},
+{w:'ÜÇ NOKTA',f:['NOKTALAMA','SON','TAMAMLANMAMIŞ','İSTENMEYEN','CÜMLE'],t:1,c:'kültür'},
+{w:'ŞATAFAT',f:['GÖSTERİŞLİ','GÖRKEM','İHTİŞAM','ÇARPICI','SÜS'],t:1,c:'genel'},
+{w:'ZAMİR',f:['İSİM','KİŞİ','ADIL','İŞARET','KELİME'],t:1,c:'kültür'},
+{w:'NOKTA',f:['SON','İŞARET','TARİH','CÜMLE','SAAT'],t:1,c:'kültür'},
+{w:'AHESTE',f:['YAVAŞ','AĞIR','HIZLI','TEMBEL','DURGUN'],t:1,c:'kültür'},
+{w:'PİL',f:['KALEM','İNCE','KUMANDA','EL FENERİ','FEN'],t:1,c:'teknoloji'},
+{w:'PROSPEKTÜS',f:['İLAÇ','ECZANE','OKUMAK','İÇİNDEKİLER','KULLANMAK'],t:1,c:'genel'},
+{w:'ÇEVİK',f:['KUVVET','POLİS','ASKER','GÜÇ','HIZLI'],t:1,c:'genel'},
+{w:'YAMAÇ',f:['UÇURUM','YÜKSEK','DAĞ','DİK','PARAŞÜT'],t:1,c:'bilim'},
+{w:'PAYLAŞMAK',f:['VERMEK','BÖLÜŞMEK','ZEKAT','FAKİR','ZENGİN'],t:1,c:'kültür'},
+{w:'KURBAN',f:['KESMEK','ALLAH','BAYRAM','KOÇ','HAYVAN'],t:1,c:'kültür'},
+{w:'HAC',f:['KABE','TAVAF','MEKKE','İHRAM','İBADET'],t:1,c:'kültür'},
+{w:'SADAKA',f:['PARA','ÖMÜR','FAKİR','DİLENCİ','YARDIM'],t:1,c:'kültür'},
+{w:'PUSULA',f:['BİLİM','DENİZCİLİK','KAPTAN','GEMİ','YOL'],t:1,c:'bilim'},
+{w:'PETROL',f:['OTOMOBİL','YAKIT','AKARYAKIT','BENZİN','MAZOT'],t:1,c:'bilim'},
+{w:'CİHAZ',f:['MAKİNE','ÜRÜN','APARAT','KÜÇÜK','ELEKTRONİK'],t:1,c:'teknoloji'},
+{w:'BETON',f:['İNŞAAT','GRİ','DUVAR','YAPMAK','ÇİMENTO'],t:1,c:'ev'},
+{w:'SERGİ',f:['DÖNEM','OKUL','DERS','FUAR','SUNMAK'],t:1,c:'sanat'},
+{w:'BİLİM',f:['İNSAN','YENİ','LABORATUVAR','ARAŞTIRMA','DENEY'],t:1,c:'bilim'},
+{w:'REKLAM',f:['YAPMAK','UYGULAMA','TELEVİZYON','SATIŞ','PARA'],t:1,c:'genel'},
+{w:'FİİL',f:['İŞ','OLUŞ','HAREKET','EYLEM','SÖZCÜK'],t:1,c:'kültür'},
+{w:'KUŞBAKIŞI',f:['HARİTA','TEPE','YUKARI','GÖRMEK','KROKİ'],t:1,c:'genel'},
+{w:'KÖK',f:['SÖZCÜK','EK','YAPIM','ÇEKİM','KELİME'],t:1,c:'kültür'},
+{w:'SÖZLÜK',f:['ANLAM','KELİME','SÖZCÜK','AÇIKLAMA','LÜGAT'],t:1,c:'kültür'},
+{w:'UYAK',f:['ŞİİR','DİZE','BENZERLİK','KAFİYE','SES'],t:1,c:'kültür'},
+{w:'ÖYKÜ',f:['HİKÂYE','KAHRAMAN','YAZAR','YER','KİTAP'],t:1,c:'kültür'},
+{w:'ŞİİR',f:['ŞAİR','MISRA','DİZE','KITA','DÖRTLÜK'],t:1,c:'kültür'},
+{w:'MASAL',f:['OLAĞANÜSTÜ','KAHRAMAN','YAZAR','KELOĞLAN','KİTAP'],t:1,c:'kültür'},
+{w:'ZIT ANLAM',f:['KARŞIT','SÖZCÜK','ÖRNEK','BİRBİRİNE','MANA'],t:1,c:'kültür'},
+{w:'KURNA',f:['HAMAM','YIKANMAK','SU','TELLAK','GÖBEK TAŞI'],t:1,c:'ev'},
+{w:'CEMRE',f:['DÜŞMEK','HAVA','TOPRAK','SU','BAHAR'],t:1,c:'kültür'},
+{w:'ŞAMDAN',f:['MUM','IŞIK','AYDINLIK','YAKMAK','SÜS'],t:1,c:'ev'},
+{w:'ÇAYLAK',f:['ACEMİ','DENEYİM','TECRÜBE','USTA','YENİ'],t:1,c:'genel'},
+{w:'HARABE',f:['YIKIK','ESKİ','TARİHİ','EFES','GEZMEK'],t:1,c:'tarih'},
+{w:'NİHALE',f:['ALTLIK','TENCERE','ÇAYDANLIK','SICAK','TEZGÂH'],t:1,c:'ev'},
+{w:'KORNİŞ',f:['TAVAN','PERDE','ASMAK','PENCERE','CAM'],t:1,c:'ev'},
+{w:'TIRABZAN',f:['MERDİVEN','KORKULUK','İNMEK','ÇIKMAK','BİNA'],t:1,c:'ev'},
+{w:'PİŞMANLIK',f:['HATA','ÜZÜLMEK','YANLIŞ','KEŞKE','SON'],t:1,c:'genel'},
+{w:'KUMBARA',f:['PARA','BİRİKTİRMEK','YATIRIM','BANKA','SAKLAMAK'],t:1,c:'ev'},
+{w:'KABZIMAL',f:['MEYVE','SEBZE','HAL','SATMAK','ARACI'],t:1,c:'genel'},
+{w:'SAĞDIÇ',f:['DAMAT','DÜĞÜN','GELİN','GÜVEY','SIRTLAMA'],t:1,c:'kültür'},
+{w:'FERMUAR',f:['PANTOLON','MONT','GİYSİ','KIYAFET','KOT'],t:1,c:'genel'},
+{w:'KELEBEK',f:['RENKLİ','UÇMAK','TIRTIL','KOZA','HAYVAN'],t:1,c:'hayvan'},
+{w:'GÖKKUŞAĞI',f:['RENKLİ','HAVA','GÜNEŞ','YAĞMUR','EBEM'],t:1,c:'bilim'},
+{w:'BALMUMU',f:['MUM','ERİMEK','HEYKEL','MÜZE','BAL'],t:1,c:'ev'},
+{w:'BAĞLAMA',f:['TÜRKÜ','MÜZİK','SAZ','TEL','AKORT'],t:1,c:'kültür'},
+{w:'MALA',f:['İNŞAAT','DUVAR','USTA','SIVA','ÇİMENTO'],t:1,c:'ev'},
+{w:'EMPATİ',f:['KENDİNİ','BAŞKASI','YERİNE','KOYMA','DÜŞÜNME'],t:1,c:'genel'},
+{w:'DERGİ',f:['GAZETE','MECMUA','MAKALE','YAZI','KAPAK'],t:1,c:'kültür'},
+{w:'ÖZÇEKİM',f:['SELFİE','TELEFON','KENDİ','FOTOĞRAF','POZ'],t:1,c:'teknoloji'},
+{w:'HOŞGÖRÜ',f:['MEVLANA','ANLAYIŞ','EMPATİ','NE OLURSAN','GEL'],t:1,c:'kültür'},
+{w:'ÇIRA',f:['ATEŞ','YAKMAK','ODUN','TAHTA','ÇAY'],t:1,c:'ev'},
+{w:'MANİ',f:['KISA','ŞİİR','EDEBİYAT','SAKIZ','ENGEL'],t:1,c:'kültür'},
+{w:'ZEYBEK',f:['ATATÜRK','OYUN','EGE','EFE','SARI'],t:1,c:'kültür'},
+{w:'KABİN',f:['GİYİNMEK','DUŞ','DENEMEK','MAĞAZA','KIYAFET'],t:1,c:'genel'},
+{w:'DOZ',f:['MİKTAR','İLAÇ','DOKTOR','REÇETE','AŞIRI'],t:1,c:'genel'},
+{w:'EREZYON',f:['TOPRAK','KAYMA','AĞAÇ','HEYELAN','TEMA'],t:1,c:'bilim'},
+{w:'HARRY POTTER',f:['KİTAP','HERMİONE','FİLM','SİHİR','BÜYÜ'],t:1,c:'kültür'},
+{w:'MANTAR',f:['ŞAPKA','ZEHİR','AĞAÇ','ORMAN','ŞİRİNLER'],t:1,c:'yemek'},
+{w:'TOKA',f:['SAÇ','UZUN','KIZ','TAKMAK','AKSESUAR'],t:1,c:'genel'},
+{w:'KOORDİNAT',f:['YER','ENLEM','BOYLAM','BELİRTMEK','VERMEK'],t:2,c:'bilim'},
+{w:'HALÜSİNASYON',f:['HAYAL','GERÇEK','GÖRMEK','İLLÜZYON','SERAP'],t:2,c:'kültür'},
+{w:'AKROSTİŞ',f:['ŞİİR','MISRA','İSİM','İLK','KITA'],t:2,c:'kültür'},
+{w:'ADEM ELMASI',f:['ERKEK','GIRTLAK','ÇIKINTI','BOĞAZ','HAVVA'],t:2,c:'genel'},
+{w:'MECAZ',f:['KELİME','SÖZCÜK','GERÇEK ANLAM','YAN ANLAM','TERİM ANLAM'],t:2,c:'kültür'},
+{w:'ÖZNE',f:['CÜMLE','İŞ','KİŞİ','VARLIK','ÖGE'],t:2,c:'kültür'},
+{w:'FAY',f:['HAT','DEPREM','KIRILMAK','SARSILMAK','İSTANBUL'],t:2,c:'bilim'},
+{w:'VARSAYIM',f:['OLMAMIŞ','TUT Kİ','FARZ ET','DİYELİM','CÜMLE'],t:2,c:'kültür'},
+{w:'OKKA',f:['AĞIRLIK','ÖLÇÜ','BİRİM','KİLO','TARTI'],t:2,c:'genel'},
+{w:'HAL EKİ',f:['ÇEKİM EKİ','-İ HALİ','-DE HALİ','-DEN HALİ','-E HALİ'],t:2,c:'kültür'},
+{w:'EŞ SESLİ',f:['YAZILIŞ','OKUNUŞ','AYNI','SÖZCÜK','SESTEŞ'],t:2,c:'kültür'},
+{w:'FİİLİMSİ',f:['SIFAT FİİL','İSİM FİİL','ZARF FİİL','FİİL','EK'],t:2,c:'kültür'},
+{w:'YAPIM EKİ',f:['EK','KELİME','KÖK','TÜREMİŞ','YAPI'],t:2,c:'kültür'},
+{w:'BENZEŞME',f:['SERT','ÜNSÜZ','FISTIKÇI ŞAHAP','GECID','KURAL'],t:2,c:'kültür'},
+{w:'TÜREMİŞ',f:['SÖZCÜK','KELİME','YAPIM EKİ','ÇEKİM EKİ','YAPI'],t:2,c:'kültür'},
+{w:'KONUŞTURMA',f:['İNTAK','HAYVAN','CANSIZ','VARLIK','SANAT'],t:2,c:'kültür'},
+{w:'DUY',f:['TAVAN','LAMBA','IŞIK','İŞİTMEK','ANAHTAR'],t:2,c:'ev'},
+{w:'KAPAN',f:['AV','KURT','HAYVAN','TUZAK','FARE'],t:2,c:'genel'},
+{w:'KİŞİLEŞTİRME',f:['İNSAN','FABL','HAYVAN','VARLIK','KONUŞTURMA'],t:2,c:'kültür'},
+{w:'ULEMA',f:['BİLGİN','OSMANLI','DİN','ALİM','HOCA'],t:2,c:'kültür'},
+{w:'MANGALA',f:['OYUN','OSMANLI','KUYU','TAŞ','HAZİNE'],t:2,c:'kültür'},
+{w:'YAS',f:['ÖLÜM','ÜZÜLMEK','AĞLAMAK','STRES','TAZİYE'],t:2,c:'genel'},
+{w:'SANTRFOR',f:['FUTBOL','OYUNCU','SAHA','FORVET','GOL'],t:1,c:'genel'},
+{w:'MOZAİK',f:['KÜÇÜK','TAŞ','PASTA','DUVAR','PARÇA'],t:0,c:'genel'},
+{w:'SERTİFİKA',f:['BELGE','ALMAK','VERMEK','EĞİTİM','KURS'],t:1,c:'genel'},
+{w:'İNSAN SARRAFI',f:['ANLAMAK','TANIMAK','İYİ','KÖTÜ','BİLMEK'],t:1,c:'genel'},
+{w:'ELİ YATKIN',f:['BECERİKLİ','HAMARAT','İŞ','BİLMEK','ÇALIŞMAK'],t:1,c:'genel'},
+{w:'PİRAMİT',f:['MISIR','ÜÇGEN','ŞEKİL','FİRAVUN','TAŞ'],t:1,c:'genel'},
+{w:'FRENK ÜZÜMÜ',f:['KIRMIZI','ŞURUP','BÖĞÜRTLEN','AHUDUDU','MEYVE'],t:1,c:'genel'},
+{w:'MUTLU SON',f:['HİKAYE','MASAL','FİLM','AŞK','BİTMEK'],t:1,c:'genel'},
+{w:'İŞ KURMAK',f:['DÜKKAN','AÇMAK','PATRON','KENDİ','ŞİRKET'],t:1,c:'genel'},
+{w:'ÖZGÜVEN',f:['SAYGI','KENDİ','İNANMAK','BAŞARMAK','EGO'],t:1,c:'genel'},
+{w:'TİFTİK',f:['KEÇİ','YÜN','KAZAK','YUMUŞAK','KIL'],t:0,c:'genel'},
+{w:'ULVİ',f:['AMAÇ','YÜKSEK','ULU','YÜCE','BENZERSİZ'],t:0,c:'genel'},
+{w:'LAÇKALAŞMAK',f:['GEVŞEMEK','RAHAT','SAMİMİ','ORTAM','ESKİMEK'],t:1,c:'genel'},
+{w:'LARVA',f:['KURTÇUK','KURBAĞA','SİNEK','YUMURTA','YAVRU'],t:0,c:'genel'},
+{w:'KÖPEKBALIĞI',f:['HAYVAN','YÜZGEÇ','JAWS','BALİNA','OKYANUS'],t:1,c:'genel'},
+{w:'LIV TYLER',f:['SİNEMA','OYUNCU','ARWEN','ARAGORN','ELF'],t:1,c:'genel'},
+{w:'FİLETO',f:['ET','KESMEK','İNCE','DİLİM','BALIK'],t:0,c:'genel'},
+{w:'RANDIMAN',f:['VERİM','ÇALIŞMAK','İŞ','SONUÇ','BAŞARI'],t:1,c:'genel'},
+{w:'LAFAZAN',f:['KONUŞMAK','GEVEZE','SÖZ','HAZIRCEVAP','ANLATMAK'],t:1,c:'genel'},
+{w:'DERBEDER',f:['DAĞINIK','TİTİZ','TEMİZ','YAŞAMAK','DÜZENSİZ'],t:1,c:'genel'},
+{w:'MAT ETMEK',f:['SATRANÇ','YENMEK','BİTİRMEK','ŞAH','ALT ETMEK'],t:1,c:'genel'},
+{w:'ÇİĞ BÖREK',f:['YİYECEK','HAMUR','KIZARTMAK','MANTI','PUF BÖREĞİ'],t:1,c:'genel'},
+{w:'MESANE',f:['ŞİŞMEK','İDRAR','TORBA','KESE','ÇİŞ'],t:0,c:'genel'},
+{w:'SUDOKU',f:['BULMACA','SAYI','YERLEŞTİRMEK','KARE','JAPONYA'],t:0,c:'genel'},
+{w:'DİNAR',f:['PARA','BİRİM','IRAK','ARAP','KUVEYT'],t:0,c:'genel'},
+{w:'KALSİYUM',f:['KEMİK','SÜT','PEYNİR','YOĞURT','DİŞ'],t:1,c:'genel'},
+{w:'ORTODONTİ',f:['DİŞ','TIP','DAL','TEL','DOKTOR'],t:1,c:'genel'},
+{w:'KAĞIT HAVLU',f:['SİLMEK','RULO','KURULAMAK','DÖKÜLMEK','MUTFAK'],t:1,c:'genel'},
+{w:'AYNASIZ',f:['POLİS','ARGO','HIRSIZ','FİLM','KOMİSER'],t:1,c:'genel'},
+{w:'PROJEKTÖR',f:['YANSITMAK','SİNEMA','SUNUM','IŞIK','PERDE'],t:1,c:'genel'},
+{w:'ŞEHRAZAT',f:['1001 GECE','MASAL','KAHRAMAN','ANLATMAK','BERGÜZAR KOREL'],t:1,c:'genel'},
+{w:'EVHAM',f:['PANİK','ŞÜPHE','KUŞKU','VESVESE','ENDİŞE'],t:0,c:'genel'},
+{w:'PARMAKLIK',f:['HAPİSHANE','HIRSIZ','PENCERE','DEMİR','TAKMAK'],t:1,c:'genel'},
+{w:'İSHAL',f:['SULU','MİDE','BOZMAK','TUVALET','BAĞIRSAK'],t:0,c:'genel'},
+{w:'LEBİDERYA',f:['DENİZ KENARI','SAHİL','EV','YAZLIK','MANZARA'],t:1,c:'genel'},
+{w:'HELLİM PEYNİRİ',f:['KIBRIS','SALATA','KAŞAR','KIZARTMAK','KAHVALTI'],t:1,c:'genel'},
+{w:'REKOLTE',f:['TARIM','ÜRÜN','YIL','ALMAK','TARLA'],t:1,c:'genel'},
+{w:'DURAK',f:['OTOBÜS','TREN','DOLMUŞ','İNMEK','BİNMEK'],t:0,c:'genel'},
+{w:'LOKAVT',f:['GREV','İŞÇİ','ÇIKARMAK','PATRON','TOPLU'],t:0,c:'genel'},
+{w:'NİŞASTA',f:['ŞEKER','KARBONHİDRAT','YİYECEK','PATATES','MISIR'],t:1,c:'genel'},
+{w:'ŞEBNEM FERAH',f:['ŞARKICI','KADIN','ROCK','VOLVOX','VOKAL'],t:1,c:'genel'},
+{w:'CAN SİMİDİ',f:['DENİZ','YUVARLAK','TAKMAK','BOĞULMAK','VAPUR'],t:1,c:'genel'},
+{w:'KAMP',f:['ÇADIR','ORMAN','ATEŞ','UYKU TULUMU','İZCİ'],t:0,c:'genel'},
+{w:'SONRADAN GÖRME',f:['ZENGİN','FAKİR','GÖSTERİŞ','ÖVÜNMEK','ABARTMAK'],t:1,c:'genel'},
+{w:'KIYASIYA',f:['MÜCADELE','ZORLU','REKABET','ÇEKİŞMELİ','KIRAN KIRANA'],t:1,c:'genel'},
+{w:'KANTİN',f:['OKUL','TOST','KAFETERYA','ÖĞRENCİ','YEMEK'],t:0,c:'genel'},
+{w:'TAKMA DİŞ',f:['AĞIZ','YEMEK','YAŞLI','DÖKÜLMEK','DAMAK'],t:1,c:'genel'},
+{w:'BEKÇİ',f:['DÜDÜK','HIRSIZ','GÜVENLİK','KULÜBE','KORUMAK'],t:0,c:'genel'},
+{w:'FOS ÇIKMAK',f:['GÜVENMEK','GERÇEKLEŞMEK','UMMAK','BOŞ','BEKLEMEK'],t:1,c:'genel'},
+{w:'DANIEL CRAIG',f:['JAMES BOND','AKTÖR','007','SARIŞIN','AJAN'],t:1,c:'genel'},
+{w:'MALTA',f:['ADA','ŞOVALYE','ÜLKE','AKDENİZ','ERİK'],t:0,c:'genel'},
+{w:'FİLE',f:['PAZAR','TORBA','İP','BASKETBOL','TAŞIMAK'],t:0,c:'genel'},
+{w:'ZINEDINE ZIDANE',f:['FUTBOL','JUBİLE','CEZAYİR','FRANSA','REAL MADRİD'],t:1,c:'genel'},
+{w:'MENEMEN',f:['YEMEK','YUMURTA','DOMATES','TAVA','BİBER'],t:1,c:'genel'},
+{w:'TUNİK',f:['GİYSİ','PANTOLON','ETEK','UZUN','ELBİSE'],t:0,c:'genel'},
+{w:'KÖSTEK OLMAK',f:['ENGEL','MANİ','DESTEK','YARDIM','ÖNLEMEK'],t:1,c:'genel'},
+{w:'ÇAPAK',f:['GÖZ','SABAH','KURUMAK','UYKU','KENAR'],t:0,c:'genel'},
+{w:'BOZKIR',f:['BİTKİ','TOPRAK','KIRAÇ','ÇAYIR','ORMAN'],t:0,c:'genel'},
+{w:'VATANDAŞ',f:['ÜLKE','MİLLET','YURTTAŞ','YAŞAMAK','PASAPORT'],t:1,c:'genel'},
+{w:'BADEM EZMESİ',f:['TATLI','ŞEKERLEME','YİYECEK','LOKUM','FISTIK'],t:1,c:'genel'},
+{w:'KARNABAHAR',f:['SEBZE','MEYVE','YEMEK','BEYAZ','BROKOLİ'],t:1,c:'genel'},
+{w:'ÇEKİCİ',f:['KADIN','GÜZEL','SEKSİ','ALIMLI','İTİCİ'],t:0,c:'genel'},
+{w:'CANAN',f:['SEVGİLİ','AŞIK OLMAK','GÖNÜL VERMEK','KADIN','YAR'],t:0,c:'genel'},
+{w:'TUĞRA',f:['OSMANLI','İMZA','PADİŞAH','SEMBOL','İSİM'],t:0,c:'genel'},
+{w:'BLENDER',f:['KARIŞTIRMAK','PARÇALAMAK','MUTFAK','ALET','YEMEK'],t:1,c:'genel'},
+{w:'KROMOZOM',f:['X','Y','GENETİK','DNA','HÜCRE'],t:1,c:'genel'},
+{w:'SİYAH KUŞAK',f:['UZAK DOĞU','JUDO','KARATE','SPOR','AİKİDO'],t:1,c:'genel'},
+{w:'BÜZGÜ',f:['DİKMEK','KUMAŞ','İPLİK','KIVRIM','BOLLUK'],t:0,c:'genel'},
+{w:'NÜFUS SAYIMI',f:['ÜLKE','YAŞAMAK','İNSAN','MEMUR','EV'],t:1,c:'genel'},
+{w:'KETEN',f:['KUMAŞ','PANTOLON','YAZLIK','CEKET','BURUŞMAK'],t:0,c:'genel'},
+{w:'HACI BEKTAŞ-I VELİ',f:['ALEVİ','TASAVVUF','ŞENLİK','MEVLANA','FIKRA'],t:1,c:'genel'},
+{w:'VAZELİN',f:['YUMUŞAK','SÜRMEK','EL','AYAK','KREM'],t:1,c:'genel'},
+{w:'AMONYAK',f:['SULU','TEMİZLİK','KOKU','ARI SOKMASI','SAÇ BOYASI'],t:1,c:'genel'},
+{w:'SOLARYUM',f:['GÜNEŞ','YANMAK','BRONZLAŞMAK','TEN','ESMER'],t:1,c:'genel'},
+{w:'MAKSAT',f:['AMAÇ','AŞMAK','İSTEMEK','NEDEN','SEBEP'],t:0,c:'genel'},
+{w:'GENSORU',f:['TBMM','ÖNERGE','BAKAN','MİLLETVEKİLİ','SORUŞTURMA'],t:1,c:'genel'},
+{w:'MESİRE',f:['YER','PİKNİK','GEZMEK','AĞAÇLIK','DOĞAL'],t:0,c:'genel'},
+{w:'BOA YILANI',f:['HAYVAN','KOBRA','SÜRÜNGEN','UZUN','BÜYÜK'],t:1,c:'genel'},
+{w:'KORNEA',f:['GÖZ','İRİS','GÖRMEK','PARÇA','YIRTMAK'],t:0,c:'genel'},
+{w:'MİZANSEN',f:['YARATMAK','TAKLİT','SİNEMA','DÜZENLEMEK','SAHNE'],t:1,c:'genel'},
+{w:'RANZA',f:['YATAK','İKİ','KAT','KOĞUŞ','UYUMAK'],t:0,c:'genel'},
+{w:'ABİDİN DİNO',f:['RESSAM','NAZIM HİKMET','FRANSA','MUTLULUK','SERGİ'],t:1,c:'genel'},
+{w:'SİNEMASKOP',f:['GENİŞ','SİYAH','BANT','ÇERÇEVE','FİLM'],t:1,c:'genel'},
+{w:'TESLİMAT',f:['POSTA','KARGO','GÖNDERMEK','MEKTUP','ALMAK'],t:1,c:'genel'},
+{w:'BİLMECE',f:['BULMACA','TEKERLEME','GİZLİ','SORMAK','OYUN'],t:1,c:'genel'},
+{w:'BANDANA',f:['SAÇ','TAKMAK','EŞARP','BAĞLAMAK','GÜNEŞ'],t:1,c:'genel'},
+{w:'PÜSKÜRMEK',f:['YANARDAĞ','LAV','SU','ÇIKARMAK','FIŞKIRMAK'],t:1,c:'genel'},
+{w:'ARSIZ',f:['ŞIMARIK','TERBİYESİZ','DAYAK','UTANMAZ','YÜZSÜZ'],t:0,c:'genel'},
+{w:'KORTEJ',f:['TÖREN','KONVOY','ASKER','YÜRÜMEK','SIRA'],t:0,c:'genel'},
+{w:'ANKA KUŞU',f:['HAYALİ','MASAL','EFSANE','KAF DAĞI','KÜL'],t:1,c:'genel'},
+{w:'HAMLET',f:['KAHRAMAN','\'OLMAK YADA OLMAMAK\'','SHAKESPEARE','TİYATRO','SİNEMA'],t:0,c:'genel'},
+{w:'STEPNE',f:['LASTİK','YEDEK','TEKERLEK','ARABA','PATLATMAK'],t:0,c:'genel'},
+{w:'PANZEHİR',f:['ŞIRINGA','İYİLEŞTİRMEK','MADDE','SOKMAK','YILAN'],t:1,c:'genel'},
+{w:'DEFNE',f:['YAPRAK','AĞAÇ','BALIK','KOKMAK','MİTOLOJİ'],t:0,c:'genel'},
+{w:'CANINA KASDETMEK',f:['TEŞEBBÜS','ÖLDÜRMEK','YARALAMAK','CİNAYET','HAZIRLANMAK'],t:1,c:'genel'},
+{w:'SU TOPLAMAK',f:['YARA','AYAK','YÜRÜMEK','EL','ŞİŞMEK'],t:1,c:'genel'},
+{w:'İSYANKAR',f:['ASİ','GENÇ','DELİKANLI','BAŞKALDIRMAK','KAVGA'],t:1,c:'genel'},
+{w:'PUF',f:['KOLTUK','OTURMAK','MİNDER','YUMUŞAK','ARMUT'],t:0,c:'genel'},
+{w:'SÜTLİMAN',f:['SAKİN','SESSİZ','HUZURLU','DURGUN','OLAY'],t:1,c:'genel'},
+{w:'MİSTİK',f:['FAL','DOĞAÜSTÜ','GÜÇ','GİZEM','ESRARENGİZ'],t:0,c:'genel'},
+{w:'GEBE',f:['HAMİLE','KADIN','BEBEK','DOKUZ AY','KARIN'],t:0,c:'genel'},
+{w:'MAESTRO',f:['ORKESTRA','YÖNETMEN','ŞEF','BESTECİ','KLASİK MÜZİK'],t:1,c:'genel'},
+{w:'KOKOŞ',f:['SÜSLÜ','GİYİNMEK','HAVALI','AŞIRI','TAKIŞTIRMAK'],t:0,c:'genel'},
+{w:'SÖĞÜŞ',f:['DOMATES','SALATALIK','KESMEK','SOĞUK','ET'],t:0,c:'genel'},
+{w:'TON BALIĞI',f:['SANDVİÇ','KONSERVE','ORKİNOS','SALATA','YEMEK'],t:1,c:'genel'},
+{w:'KÜFE',f:['SEPET','TAŞIMAK','HAMAL','YÜK','SIRT'],t:0,c:'genel'},
+{w:'KAYDIRAK',f:['OYUN','PARK','ÇOCUK','SALINCAK','TAHTEREVALLİ'],t:1,c:'genel'},
+{w:'KIŞ UYKUSU',f:['AYI','YATMAK','SOĞUK','SÜRÜNGEN','HAYVAN'],t:1,c:'genel'},
+{w:'MOTİVASYON',f:['TEŞVİK','KIRMAK','İSTEK','MORAL','HEVES'],t:1,c:'genel'},
+{w:'GÖZ KULAK OLMAK',f:['İLGİLENMEK','ÇOCUK','BAKMAK','KORUMAK','BIRAKMAK'],t:1,c:'genel'},
+{w:'SULUBOYA',f:['YAĞLIBOYA','RESİM','FIRÇA','PALET','RENK'],t:1,c:'genel'},
+{w:'BARUT',f:['FIÇI','ATEŞ','PATLAMAK','TOP','SİLAH'],t:0,c:'genel'},
+{w:'AĞIRBAŞLI',f:['CİDDİ','OLGUN','HAREKET','SESSİZ','DAVRANIŞ'],t:1,c:'genel'},
+{w:'ANTİKOR',f:['HASTALIK','ZARAR','MADDE','VÜCUT','ÜRETMEK'],t:1,c:'genel'},
+{w:'OBJEKTİF',f:['FOTOĞRAF','MERCEK','KAMERA','CAM','TARAFSIZ'],t:1,c:'genel'},
+{w:'MAŞALLAH',f:['ALTIN','SÜNNET','NAZAR','GÜZEL','BEĞENMEK'],t:1,c:'genel'},
+{w:'KİLOGRAM',f:['ÖLÇÜ','TARTMAK','LİTRE','AĞIRLIK','BİRİM'],t:1,c:'genel'},
+{w:'PARKE',f:['YER','DÖŞEMEK','LAMİNANT','YÜRÜMEK','AHŞAP'],t:0,c:'genel'},
+{w:'ŞÖLEN',f:['KUTLAMA','YEMEK','İÇMEK','ZİYAFET','EĞLENCE'],t:0,c:'genel'},
+{w:'MUTANT',f:['X-MEN','NİNJA KAPLUMBAĞALAR','İNSAN','DEĞİŞMEK','YARATIK'],t:0,c:'genel'},
+{w:'ÇATALHÖYÜK',f:['ARKEOLOJİ','ANTİK','ANADOLU','ESKİ','KAZI'],t:1,c:'genel'},
+{w:'ANANAS',f:['MEYVE','TROPİKAL','SEBZE','YEMEK','KONSERVE'],t:0,c:'genel'},
+{w:'AŞIK VEYSEL',f:['MÜZİK','TÜRKÜ','TÜRK','OZAN','HALK'],t:1,c:'genel'},
+{w:'MANGA',f:['ÇİZGİ ROMAN','ANİMASYON','JAPON','ASKER','TABUR'],t:0,c:'genel'},
+{w:'FOKURDAMAK',f:['KAYNAMAK','SU','BALONCUK','SES ÇIKARMAK','BUHARLAŞMAK'],t:1,c:'genel'},
+{w:'KOMİ',f:['GARSON','MUTFAK','LOKANTA','RESTORAN','YARDIMCI'],t:0,c:'genel'},
+{w:'MARJ',f:['KAR','PAY','AYIRMAK','FİYAT','BOŞLUK'],t:0,c:'genel'},
+{w:'METEOROLOJİ',f:['HAVA DURUMU','TAHMİN','YAĞMUR','KAR','SICAKLIK'],t:1,c:'genel'},
+{w:'SFENKS',f:['MISIR','PİRAMİT','İNSAN','ASLAN','HEYKEL'],t:0,c:'genel'},
+{w:'SU AYGIRI',f:['HİPOPOTAM','MEMELİ','HAYVAN','İRİ','AFRİKA'],t:1,c:'genel'},
+{w:'BABİL KULESİ',f:['EFSANE','İNŞA ETMEK','TANRI','ULAŞMAK','ESKİ'],t:1,c:'genel'},
+{w:'AHENK',f:['UYUM','ŞİİR','SES','DANS','UZLAŞMA'],t:0,c:'genel'},
+{w:'POKER',f:['KUMAR','İSKAMBİL KAĞIDI','OYUN','FLOŞ','DÖPER'],t:0,c:'genel'},
+{w:'ETÜT',f:['DERS ÇALIŞMAK','ÖĞRETMEN','ÖDEV','OKUL','KALMAK'],t:0,c:'genel'},
+{w:'ŞEHZADE',f:['PADİŞAH','ÇOCUK','SULTAN','PRENS','ERKEK'],t:1,c:'genel'},
+{w:'KAFADAN ATMAK',f:['UYDURMAK','SALLAMAK','BİLMEK','YALLAH','TEST'],t:1,c:'genel'},
+{w:'EFENDİ',f:['BEY','SESLENMEK','KİBAR','AĞIRBAŞLI','NAZİK'],t:0,c:'genel'},
+{w:'AYASOFYA MÜZESİ',f:['KİLİSE','TURİST','SULTANAHMET','TOPKAPI SARAYI','CAMİİ'],t:1,c:'genel'},
+{w:'PARSEL',f:['ARSA','SATMAK','BÖLÜM','TAPU','PARÇA'],t:0,c:'genel'},
+{w:'GÜZELLİK YARIŞMASI',f:['KRALİÇE','MAYO','KAİNAT','JÜRİ','KIZ'],t:1,c:'genel'},
+{w:'POHPOHLAMAK',f:['ÖVMEK','YALAKALIK','YAĞ ÇEKMEK','GAZA GETİRMEK','GÜZEL SÖZ'],t:1,c:'genel'},
+{w:'EŞEKARISI',f:['BÜYÜK','SOKMAK','BAL','KOVAN','İĞNE'],t:1,c:'genel'},
+{w:'ERTUĞRUL ÖZKÖK',f:['GAZETECİ','HÜRRİYET','YAZAR','YÖNETİCİ','YAYIN'],t:1,c:'genel'},
+{w:'BEL BAĞLAMAK',f:['GÜVENMEK','YARDIM','MEDET UMMAK','İNANMAK','ARKADAŞ'],t:1,c:'genel'},
+{w:'KOTA',f:['DOLDURMAK','KONTENJAN','SINIRLAMA','KISITLAMA','SAYI'],t:0,c:'genel'},
+{w:'BUZ DEVRİ',f:['ESKİ ÇAĞ','SOĞUK','ERİMEK','KAR','ÇİZGİ FİLM'],t:1,c:'genel'},
+{w:'İMSAK',f:['İFTAR','ORUÇ','SAHUR','RAMAZAN','EZAN'],t:0,c:'genel'},
+{w:'BAYKUŞ',f:['HAYVAN','KUŞ','GECE','UÇMAK','UĞURSUZ'],t:0,c:'genel'},
+{w:'TARAFTAR',f:['FUTBOL','TAKIM','TUTMAK','FANATİK','TEZAHÜRAT'],t:1,c:'genel'},
+{w:'SU BASKINI',f:['SEL','YAĞMUR','MUSLUK','AÇIK','TAŞMAK'],t:1,c:'genel'},
+{w:'ŞEKERPARE',f:['TATLI','ŞERBET','HAMUR','YUVARLAK','YEMEK'],t:1,c:'genel'},
+{w:'KÖRDÜĞÜM',f:['İP','AÇILMAK','KARIŞIK','ÇÖZMEK','BAĞLAMAK'],t:1,c:'genel'},
+{w:'KADEH',f:['İÇECEK','BARDAK','ŞARAP','CAM','RAKI'],t:0,c:'genel'},
+{w:'KALIBINI BASMAK',f:['SAVUNMAK','İNANMAK','İDDİA','GÜVENMEK','DOĞRU'],t:1,c:'genel'},
+{w:'NEMRUT DAĞI',f:['ADIYAMAN','ARKEOLOJİ','HEYKEL','GÜNBATIMI','TANRI'],t:1,c:'genel'},
+{w:'PALA BIYIK',f:['SAKAL','YÜZ','YANAK','UZUN','KIVRIK'],t:1,c:'genel'},
+{w:'FELAKET TELLALI',f:['KÖTÜMSER','ANLATMAK','SÖYLEMEK','HABER','OLAY'],t:1,c:'genel'},
+{w:'PEKMEZ',f:['TAHİN','ÜZÜM','DUT','TATLI','REÇEL'],t:0,c:'genel'},
+{w:'YOUTUBE',f:['VİDEO','PAYLAŞMAK','YÜKLEMEK','İNTERNET','SİTE'],t:1,c:'genel'},
+{w:'CADI KAZANI',f:['DÜŞMAN','HİLE','KAYNAMAK','DEDİKODU','DÜZEN'],t:1,c:'genel'},
+{w:'ÇAYIR',f:['OTLAMAK','İNEK','YEŞİL','ÇİMEN','PİKNİK'],t:0,c:'genel'},
+{w:'KRAVAT',f:['PAPYON','TAKMAK','GÖMLEK','TAKIM ELBİSE','BOYUN'],t:0,c:'genel'},
+{w:'TÖKEZLEMEK',f:['SENDELEMEK','DÜŞMEK','AYAK','TAKILMAK','TAŞ'],t:1,c:'genel'},
+{w:'LOGO',f:['ŞİRKET','SEMBOL','İSİM','AMBLEM','KURUMSAL'],t:0,c:'genel'},
+{w:'SOLAK',f:['SAĞLAK','EL','YAZMAK','TUTMAK','KULLANMAK'],t:0,c:'genel'},
+{w:'FLORENCE NİGHTİNGALE',f:['HEMŞİRE','HASTANE','KURMAK','SELİMİYE KIŞLASI','DOKTOR'],t:1,c:'genel'},
+{w:'İZDİVAÇ',f:['EVLENMEK','YUVA','GELİN','DAMAT','NİKAH'],t:1,c:'genel'},
+{w:'BENEK',f:['ÇİL','NOKTA','YÜZ','LEKE','KÜÇÜK'],t:0,c:'genel'},
+{w:'KABZA',f:['SİLAH','TABANCA','TUTMAK','SAP','KILIÇ'],t:0,c:'genel'},
+{w:'DOLMABAHÇE SARAYI',f:['OSMANLI','BEŞİKTAŞ','ATATÜRK','PADİŞAH','TOPKAPI'],t:1,c:'genel'},
+{w:'İRMİK',f:['HELVA','TATLI','BUĞDAY','UN','DAĞITMAK'],t:0,c:'genel'},
+{w:'HAZIRCEVAP',f:['SORU','LAF','ÇABUK','BULMAK','HIZLI'],t:1,c:'genel'},
+{w:'UKRAYNA',f:['ÜLKE','RUSYA','KİEV','DOĞALGAZ','KARADENİZ'],t:1,c:'genel'},
+{w:'ÇAR',f:['RUSYA','PETRO','PADİŞAH','KRAL','YÖNETMEK'],t:0,c:'genel'},
+{w:'POST',f:['HAYVAN','DERİ','YÜZMEK','KÜRK','AYI'],t:0,c:'genel'},
+{w:'LİBERO',f:['FUTBOL','TAKIM','MAÇ','DEFANS','ORTA SAHA'],t:0,c:'genel'},
+{w:'DEHLİZ',f:['KORİDOR','YER ALTI','GİZLİ','KARANLIK','GEÇİT'],t:0,c:'genel'},
+{w:'ÇELİK KASA',f:['PARA','DEĞERLİ','MÜCEVHER','EV','SAKLAMAK'],t:1,c:'genel'},
+{w:'MÜJDE AR',f:['SİNEMA','OYUNCU','SEKSİ','AYSEL GÜRSEL','ARABESK'],t:1,c:'genel'},
+{w:'FÖN ÇEKMEK',f:['KUAFÖR','SAÇ','DÜZLEŞTİRMEK','MAKİNE','SICAK'],t:1,c:'genel'},
+{w:'FAVORİ',f:['BİRİNCİ','YARIŞMA','BEĞENMEK','SEVMEK','SAKAL'],t:0,c:'genel'},
+{w:'BABACAN',f:['DAVRANMAK','GÜVENMEK','ADAM','ŞEFKAT','İYİ'],t:1,c:'genel'},
+{w:'ASPENDOS',f:['TİYATRO','ANTİK','ANTALYA','AÇIK HAVA','KONSER'],t:1,c:'genel'},
+{w:'KÜLAH',f:['ŞAPKA','KAĞIT','DONDURMA','DEĞİŞMEK','ANLATMAK'],t:0,c:'genel'},
+{w:'SLALOM',f:['KAYAK','KAR','YARIŞ','BAYRAK','PİST'],t:0,c:'genel'},
+{w:'ANTRENMAN',f:['SPOR','KOŞU','EGZERSİZ','FUTBOLCU','İDMAN'],t:1,c:'genel'},
+{w:'SAİT FAİK ABASIYANIK',f:['EDEBİYAT','YAZAR','HİKAYE','TÜRK','BURGAZADA'],t:1,c:'genel'},
+{w:'ÇİVİ YAZISI',f:['İLKÇAĞ','ESKİ','ASUR','SÜMER','TAŞ'],t:1,c:'genel'},
+{w:'AKROBAT',f:['GÖSTERİ','YETENEK','SİRK','CAMBAZ','ESNEK'],t:1,c:'genel'},
+{w:'KOLONYA',f:['FERAHLIK','SÜRMEK','LİMON','DÖKMEK','MİSAFİR'],t:1,c:'genel'},
+{w:'CANNES',f:['FİLM','FESTİVAL','FRANSA','SAHİL','SİNEMA'],t:0,c:'genel'},
+{w:'ESPRİ YAPMAK',f:['KOMİK','ŞAKA','ANLATMAK','GÜLMEK','KAHKAHA'],t:1,c:'genel'},
+{w:'MAKBUZ',f:['AİDAT','BAĞIŞ','ÖDEME','KAĞIT','FATURA'],t:0,c:'genel'},
+{w:'MÜHİMMAT',f:['DEPO','SAVAŞ','CEPHANE','ORDU','SİLAH'],t:1,c:'genel'},
+{w:'GONG',f:['SES','ZİL','TOKMAK','ÇINLAMAK','VURMAK'],t:0,c:'genel'},
+{w:'SOĞUK ALGINLIĞI',f:['NEZLE','ÜŞÜTMEK','HASTA','BURUN','BOĞAZ'],t:1,c:'genel'},
+{w:'ÇAĞLAYAN',f:['ŞELALE','SU','AKMAK','NEHİR','YÜKSEK'],t:1,c:'genel'},
+{w:'İMAMBAYILDI',f:['YEMEK','PATLICAN','ZEYTİNYAĞLI','KARNIYARIK','DOMATES'],t:1,c:'genel'},
+{w:'MACERA',f:['OLAY','HEYECAN','ADRENALİN','YAŞAMAK','SAKİN'],t:0,c:'genel'},
+{w:'AHMET ÇAKAR',f:['HAKEM','FUTBOL','ERMAN TOROĞLU','YARIŞMA','MAÇ'],t:1,c:'genel'},
+{w:'KALÇA',f:['KADIN','SALLAMAK','VÜCUT','BACAK','JENNİFER LOPEZ'],t:0,c:'genel'},
+{w:'HAKARET ETMEK',f:['KÜFÜR','SÖZ','KÖTÜ','SÖYLEMEK','ÇİRKİN'],t:1,c:'genel'},
+{w:'KONDİSYON BİSİKLETİ',f:['SPOR','EV','ÇEVİRMEK','KOŞU BANDI','ZAYIFLAMAK'],t:1,c:'genel'},
+{w:'PAVURYA',f:['YENGEÇ','İRİ','BÜYÜK','DENİZ','YEMEK'],t:1,c:'genel'},
+{w:'PATENT',f:['ALMAK','TESCİL','BULUŞ','TELİF HAKKI','KANITLAMAK'],t:0,c:'genel'},
+{w:'ŞİŞİRMEK',f:['BALON','LASTİK','ÜFLEMEK','POMPA','HAVA'],t:1,c:'genel'},
+{w:'HAFRİYAT',f:['İNŞAAT','TOPRAK','BİNA','KAZMAK','KAMYON'],t:1,c:'genel'},
+{w:'ASTRONOMİK',f:['RAKAM','YÜKSEK','PAHALI','AŞIRI','GÖKYÜZÜ'],t:1,c:'genel'},
+{w:'KAYKAY',f:['BİNMEK','ÇOCUK','TEKERLEK','TAHTA','PATEN'],t:0,c:'genel'},
+{w:'MAVİ YOLCULUK',f:['EGE','GEZİ','YAT','KİRALAMAK','AKDENİZ'],t:1,c:'genel'},
+{w:'BOŞ BULUNMAK',f:['DİKKATSİZ','DALGIN','DAVRANMAK','SÖYLEMEK','POT KIRMAK'],t:1,c:'genel'},
+{w:'ORHAN GENCEBAY',f:['MÜZİSYEN','ARABESK','FERDİ TAYFUR','MÜSLÜM GÜRSES','BATSIN BU DÜNYA'],t:1,c:'genel'},
+{w:'DIŞLANMAK',f:['ARKADAŞ','KONUŞMAK','ATMAK','ALMAK','ORTAM'],t:1,c:'genel'},
+{w:'NEŞTER',f:['AMELİYAT','BIÇAK','KESMEK','CERRAH','DOKTOR'],t:0,c:'genel'},
+{w:'ŞEBEKE',f:['AĞ','DONANIM','ÖRGÜT','ELEKTRİK','TESİSAT'],t:0,c:'genel'},
+{w:'YAREN',f:['DOST','ARKADAŞ','SEVGİLİ','YAKIN','EŞ'],t:0,c:'genel'},
+{w:'SERE SERPE',f:['GÜNEŞLENMEK','YATMAK','RAHAT','AÇIK SAÇIK','SERBEST'],t:1,c:'genel'},
+{w:'TOKYO',f:['ŞEHİR','JAPONYA','ADA','ASYA','BAŞKENT'],t:0,c:'genel'},
+{w:'İÇİNE DOĞMAK',f:['HİSSETMEK','ÖNCE','BİLMEK','MALUM OLMAK','SEZMEK'],t:1,c:'genel'},
+{w:'BANKO',f:['KESİN','AT YARIŞI','KAZANMAK','BAHİS','GARANTİ'],t:0,c:'genel'},
+{w:'PİSBOĞAZ',f:['OBUR','YEMEK','AÇGÖZLÜ','TOK','DOYMAK'],t:1,c:'genel'},
+{w:'ÇOBANYILDIZI',f:['GÖKYÜZÜ','GECE','YÖN','PARLAK','KUTUP'],t:1,c:'genel'},
+{w:'ALASKA',f:['FRİGO','AMERİKA','SOĞUK','EYALET','RUSYA'],t:0,c:'genel'},
+{w:'BEYZBOL',f:['SPOR','AMERİKA','TOP','VURMAK','SOPA'],t:1,c:'genel'},
+{w:'GÖRGÜ KURALLARI',f:['ADAP','SAYGI','TERBİYE','TOPLUM','UYMAK'],t:1,c:'genel'},
+{w:'ÇİÇEK PASAJI',f:['İSTANBUL','BEYOĞLU','NEVİZADE','YEMEK','İÇMEK'],t:1,c:'genel'},
+{w:'KAĞIT HELVA',f:['YİYECEK','TATLI','YUVARLAK','DONDURMA','KÜLAH'],t:1,c:'genel'},
+{w:'DAMLA',f:['SU','MUSLUK','GÖZ','YAĞMUR','KÜÇÜK'],t:0,c:'genel'},
+{w:'DENEY',f:['KİMYA','LABORATUAR','FARE','BİLİM','TÜP'],t:0,c:'genel'},
+{w:'TUŞ KİLİDİ',f:['TELEFON','AÇIK','KAPALI','BASMAK','ARAMAK'],t:1,c:'genel'},
+{w:'MİLADİ TAKVİM',f:['GÜN','AY','ZAMAN','AJANDA','HİCRİ'],t:1,c:'genel'},
+{w:'KÖŞE BUCAK',f:['KAÇMAK','TEMİZLEMEK','HER YER','SAKLANMAK','DOLAŞMAK'],t:1,c:'genel'},
+{w:'RENGİ ATMAK',f:['KORKMAK','YIKAMAK','SOLMAK','YÜZ','SARARMAK'],t:1,c:'genel'},
+{w:'ALP ARSLAN',f:['SELÇUKLU','HÜKÜMDAR','TÜRK','ANADOLU','MALAZGİRT SAVAŞI'],t:1,c:'genel'},
+{w:'KOLERA',f:['HASTALIK','SALGIN','TİFO','İSHAL','BULAŞICI'],t:0,c:'genel'},
+{w:'EBEVEYN',f:['ANNE','BABA','ÇOCUK','AİLE','İKİLİ'],t:1,c:'genel'},
+{w:'FRAPAN',f:['ELBİSE','GİYSİ','DİKKAT ÇEKİCİ','RÜKÜŞ','HAVALI'],t:0,c:'genel'},
+{w:'KONTAK',f:['KAFA','LENS','ANAHTAR','ARABA','TEMAS'],t:0,c:'genel'},
+{w:'MURATHAN MUNGAN',f:['EDEBİYAT','ŞAİR','ROMAN','YAZAR','KIRK ODA'],t:1,c:'genel'},
+{w:'BACANAK',f:['EŞ','KARDEŞ','BALDIZ','KOCA','KIZ'],t:1,c:'genel'},
+{w:'PSİKOLOJİ',f:['SOSYOLOJİ','PSİKİYATRİ','RUHBİLİM','DEPRESYON','FREUD'],t:1,c:'genel'},
+{w:'RİZİKO',f:['RİSK','ZARAR','TEHLİKE','YARIŞMA','TELEVİZYON'],t:0,c:'genel'},
+{w:'DALGAKIRAN',f:['DENİZ','BETON','KAYA','TEKNE','SET'],t:1,c:'genel'},
+{w:'REHİN VERMEK',f:['KUYUMCU','BORÇ','PARA','MÜCEVHER','ALTIN'],t:1,c:'genel'},
+{w:'ZORUNA GİTMEK',f:['BOZULMAK','ÜZÜLMEK','GÜCÜNE GİTMEK','DOKUNMAK','ONUR'],t:1,c:'genel'},
+{w:'ROKET',f:['FÜZE','ATMAK','SAVAŞ','SİLAH','MENZİL'],t:0,c:'genel'},
+{w:'KARİDES',f:['DENİZ','KABUKLU','JUMBO','ISTAKOZ','GÜVEÇ'],t:1,c:'genel'},
+{w:'DEJENERE',f:['BOZULMAK','GENÇLİK','YOZLAŞMAK','NESİL','TOPLUM'],t:1,c:'genel'},
+{w:'ÇERKEZTAVUĞU',f:['YEMEK','CEVİZ','MEZE','DİDİKLEMEK','ET'],t:1,c:'genel'},
+{w:'İÇERLEMEK',f:['ALINMAK','GÜCENMEK','ÜZÜLMEK','DARILMAK','KIRILMAK'],t:1,c:'genel'},
+{w:'HEYBE',f:['ÇANTA','TORBA','EŞEK','TAŞIMAK','OMUZ'],t:0,c:'genel'},
+{w:'PANSUMAN',f:['YARA','TEMİZLEMEK','BAKMAK','HEMŞİRE','PAMUK'],t:1,c:'genel'},
+{w:'ZAMANE',f:['ÇOCUK','BUGÜN','GENÇ','ŞİMDİ','YAKINMAK'],t:0,c:'genel'},
+{w:'ASMA YAPRAĞI',f:['ÜZÜM','DOLMA','ŞARAP','SARMA','ZEYTİNYAĞI'],t:1,c:'genel'},
+{w:'SEMER',f:['EYER','EŞEK','AT','SIRT','OTURMAK'],t:0,c:'genel'},
+{w:'MUŞMULA',f:['BİTKİ','AĞAÇ','MEYVE','BURUŞUK','SURAT'],t:1,c:'genel'},
+{w:'YAZLIK',f:['EV','OTURMAK','GİTMEK','DENİZ','TATİL'],t:0,c:'genel'},
+{w:'VOKAL',f:['SES','ŞARKI','SÖYLEMEK','MÜZİK','YAPMAK'],t:0,c:'genel'},
+{w:'JAMBON',f:['KAHVALTI','SALAM','ET','SANDVİÇ','DANA'],t:0,c:'genel'},
+{w:'ULTRASON',f:['BAKMAK','BEBEK','HAMİLE','ÇEKTİRMEK','RÖNTGEN'],t:1,c:'genel'},
+{w:'ALYUVAR',f:['KAN','DAMAR','KIRMIZI','HÜCRE','AKYUVAR'],t:1,c:'genel'},
+{w:'TEZKERE',f:['ASKERLİK','BİTİRMEK','BELGE','KAĞIT','ORDU'],t:1,c:'genel'},
+{w:'DÜZ TABAN',f:['ASKERLİK','AYAK','YÜRÜMEK','ORTOPEDİ','TOPUK'],t:1,c:'genel'},
+{w:'KAYMAKAM',f:['VALİ','İLÇE','YÖNETMEK','MEMUR','BELEDİYE'],t:1,c:'genel'},
+{w:'KALAY',f:['BAKIR','TENCERE','KAP KACAK','AZARLAMAK','PARLATMAK'],t:0,c:'genel'},
+{w:'İLMEK',f:['DÜĞÜM','HALI','ÖRMEK','ŞİŞ','TIĞ'],t:0,c:'genel'},
+{w:'KANALİZASYON',f:['LAĞIM','TUVALET','PİS','SU','YER ALTI'],t:1,c:'genel'},
+{w:'MAHSUL',f:['ÜRÜN','TARLA','TOPLAMAK','VERİM','ÇİFTÇİ'],t:0,c:'genel'},
+{w:'BURNUNDAN GETİRMEK',f:['RAHATSIZ ETMEK','FİTİL FİTİL','PİŞMAN ETMEK','BOZMAK','ZEHİR ETMEK'],t:1,c:'genel'},
+{w:'CEZVE',f:['KAHVE','FAL','PİŞİRMEK','SAP','TELVE'],t:0,c:'genel'},
+{w:'BAHANE',f:['ARAMAK','UYDURMAK','YALAN','SEBEP','SÖYLEMEK'],t:0,c:'genel'},
+{w:'KONFETİ',f:['KAĞIT','MAÇ','RENKLİ','ATMAK','DÜĞÜN'],t:1,c:'genel'},
+{w:'GANİMET',f:['SAVAŞ','TOPLAMAK','YAĞMA','KORSAN','ÇALMAK'],t:1,c:'genel'},
+{w:'JOHN LENNON',f:['MÜZİSYEN','BEATLES','YOKO ONO','ŞARKICI','IMAGİNE'],t:1,c:'genel'},
+{w:'FACEBOOK',f:['İNTERNET','ARKADAŞLIK','SİTE','FOTOĞRAF','ÜYE'],t:1,c:'genel'},
+{w:'TEKZİP',f:['YALANLAMAK','GERÇEK','GAZETE','YAYINLAMAK','HABER'],t:0,c:'genel'},
+{w:'ZİGON',f:['MOBİLYA','İÇ İÇE','SEHPA','MİSAFİR','SALON'],t:0,c:'genel'},
+{w:'KOALA',f:['AVUSTRALYA','HAYVAN','AYI','OKALİPTÜS','AĞAÇ'],t:0,c:'genel'},
+{w:'SEÇENEK',f:['ŞIK','SINAV','OPSİYON','ALTERNATİF','BAŞKA'],t:1,c:'genel'},
+{w:'KUBBE',f:['CAMİİ','YUVARLAK','AYASOFYA','KÜRE','ÇATI'],t:0,c:'genel'},
+{w:'HEIDI KLUM',f:['MANKEN','TOP MODEL','SEAL','DEFİLE','ALMAN'],t:1,c:'genel'},
+{w:'ÇEMEN',f:['PASTIRMA','ACI','SOS','SÜRMEK','KOKULU'],t:0,c:'genel'},
+{w:'DENİZKESTANESİ',f:['BATMAK','DİKEN','KABUK','AYAK','YUVARLAK'],t:1,c:'genel'},
+{w:'CASUS',f:['JAMES BOND','GİZLİ','AJAN','MATA HARI','007'],t:0,c:'genel'},
+{w:'KUVAY-I MİLLİYE',f:['KURTULUŞ SAVAŞI','MUSTAFA KEMAL ATATÜRK','ORDU','HALK','İSTİKLAL'],t:1,c:'genel'},
+{w:'SATIR',f:['BIÇAK','ET','DOĞRAMAK','YAZI','KESMEK'],t:0,c:'genel'},
+{w:'LEHİMLEMEK',f:['YAPIŞTIRMAK','TUTTURMAK','METAL','PARÇA','KAYNAK'],t:1,c:'genel'},
+{w:'EĞİLİM',f:['İLGİ','YÖNETMEK','MERAK','MEYİL','İSTEMEK'],t:0,c:'genel'},
+{w:'OKLAVA',f:['HAMUR','AÇMAK','BÖREK','MERDANE','SOPA'],t:0,c:'genel'},
+{w:'KÜLBASTI',f:['ET','PİRZOLA','IZGARA','KEMİKSİZ','DANA'],t:1,c:'genel'},
+{w:'PLANÖR',f:['UÇMAK','HAVA','GÖKYÜZÜ','MOTOR','KANAT'],t:0,c:'genel'},
+{w:'FETHİYE',f:['MUĞLA','ÖLÜDENİZ','TATİL','AKDENİZ','KELEBEKLER VADİSİ'],t:1,c:'genel'},
+{w:'LATİN AMERİKA',f:['GÜNEY','KITA','BREZİLYA','ÜLKE','ARJANTİN'],t:1,c:'genel'},
+{w:'CANLI YAYIN',f:['TELEVİZYON','NAKLEN','HABER','BAĞLANMAK','MAÇ'],t:1,c:'genel'},
+{w:'LCD EKRAN',f:['TELEVİZYON','BİLGİSAYAR','PLAZMA','İNCE','SEYRETMEK'],t:1,c:'genel'},
+{w:'GASTRONOMİ',f:['YEMEK','BİLİM','AŞÇI','MUTFAK','GURME'],t:1,c:'genel'},
+{w:'GOTİK',f:['ORTAÇAĞ','MİMARİ','GENÇLİK','SİYAH','PUNK'],t:0,c:'genel'},
+{w:'ELİŞİ',f:['DANTEL','ÖRGÜ','ÇEYİZ','OKUL','DERS'],t:0,c:'genel'},
+{w:'GELİNLİK',f:['EVLİLİK','DUVAK','GİYMEK','BEYAZ','ELBİSE'],t:1,c:'genel'},
+{w:'KRATER',f:['AY','GÖKTAŞI','ÇUKUR','YANARDAĞ','VOLKAN'],t:0,c:'genel'},
+{w:'NARSİST',f:['HAYRAN','BENCİL','EGOİST','SEVMEK','KENDİ'],t:1,c:'genel'},
+{w:'EKÜRİ',f:['AT','İKİLİ','ARKADAŞ','YARIŞ','ORTAK'],t:0,c:'genel'},
+{w:'HEBA ETMEK',f:['ZARAR','HARCAMAK','ZİYAN ETMEK','YİTİRMEK','KAYBETMEK'],t:1,c:'genel'},
+{w:'TESTERE',f:['FİLM','KORKU','ALET','KESMEK','AĞAÇ'],t:1,c:'genel'},
+{w:'KLİP',f:['MÜZİK','VİDEO','TELEVİZYON','İZLEMEK','ÇEKMEK'],t:0,c:'genel'},
+{w:'TÖREN',f:['BAYRAK','NİKAH','RESMİ','AÇILIŞ','MERASİM'],t:0,c:'genel'},
+{w:'PARMESAN',f:['PEYNİR','SALATA','İTALYAN','MAKARNA','ÜST'],t:1,c:'genel'},
+{w:'AFACAN',f:['YARAMAZ','ÇOCUK','ZEKİ','KARIŞTIRMAK','HAYLAZ'],t:0,c:'genel'},
+{w:'AMBARGO',f:['KOYMAK','ENGELLEMEK','ÜLKE','TİCARET','UYGULAMAK'],t:1,c:'genel'},
+{w:'SANDIK',f:['ÇEYİZ','TAHTA','EŞYA','SEÇİM','OY ATMAK'],t:0,c:'genel'},
+{w:'BEŞAMEL',f:['SOS','ET','TAVUK','UN','SÜT'],t:1,c:'genel'},
+{w:'İÇİ GEÇMEK',f:['UYUMAK','İSTEMEK','YATMAK','İSTEKSİZ','YAŞLI'],t:1,c:'genel'},
+{w:'İSPANYOL PAÇA',f:['PANTOLON','KOT','GENİŞ','UÇ','MODA'],t:1,c:'genel'},
+{w:'SÜLALE',f:['AİLE','AKRABA','SOY','TEYZE','AMCA'],t:0,c:'genel'},
+{w:'SARPA SARMAK',f:['KARIŞMAK','ÇÖZMEK','İŞ','BOZULMAK','ZORLUK'],t:1,c:'genel'},
+{w:'GETTO',f:['MAHALLE','ŞEHİR','AZINLIK','YABANCI','YAŞAMAK'],t:0,c:'genel'},
+{w:'İFLAS ETMEK',f:['HACİZ','BANKA','ŞİRKET','BORÇ','BATMAK'],t:1,c:'genel'},
+{w:'AÇIK FİKİRLİ',f:['ANLAMAK','MODERN','YENİLİK','DÜŞÜNMEK','BAĞNAZ'],t:1,c:'genel'},
+{w:'ÇULLANMAK',f:['ABANMAK','ÜZERİNE GİTMEK','ÜSTÜNE DÜŞMEK','ATLAMAK','ZIPLAMAK'],t:1,c:'genel'},
+{w:'JUSTIN TIMBERLAKE',f:['ŞARKICI','AMERİKA','DANS','ERKEK','BRITNEY SPEARS'],t:1,c:'genel'},
+{w:'KABAKULAK',f:['ÇOCUK','HASTALIK','KIZAMIK','SUÇİÇEĞİ','ŞİŞMEK'],t:1,c:'genel'},
+{w:'GARANTİ BELGESİ',f:['BOZULMAK','TAMİR','YIL','TAAHHÜT','EŞYA'],t:1,c:'genel'},
+{w:'EMRİVAKİ YAPMAK',f:['OLDUBİTTİ','ANİ','ACELE','KARGAŞA','ZORLAMAK'],t:1,c:'genel'},
+{w:'ROKFOR',f:['PEYNİR','KÜF','SÜT','FRANSIZ','BEYAZ'],t:0,c:'genel'},
+{w:'HİLAL',f:['AY','ŞEKİL','DOLUNAY','YILDIZ','BAYRAK'],t:0,c:'genel'},
+{w:'ABONE',f:['DERGİ','AY','GAZETE','GELMEK','YONCA EVCİMİK'],t:0,c:'genel'},
+{w:'SİVİL TOPLUM',f:['ÖRGÜT','DEVLET','BAĞIMSIZ','DERNEK','VAKIF'],t:1,c:'genel'},
+{w:'DONMAK',f:['BUZ','SIFIR','DERECE','SU','KIŞ'],t:0,c:'genel'},
+{w:'KAFA DENGİ',f:['ARKADAŞ','UYUMLU','ANLAŞMAK','AYNI','ZEVK'],t:1,c:'genel'},
+{w:'SÜVARİ',f:['AT','ASKER','BİNMEK','SAVAŞ','PİYADE'],t:0,c:'genel'},
+{w:'SÜKUNET',f:['DURGUN','SESSİZ','HUZURLU','DİNGİN','GÜRÜLTÜLÜ'],t:1,c:'genel'},
+{w:'BAŞI BAĞLI',f:['EVLİ','NİŞANLI','SÖZLÜ','BEKAR','SEVGİLİ'],t:1,c:'genel'},
+{w:'LÜLETAŞI',f:['PİPO','BEYAZ','OYMAK','YUMUŞAK','ESKİŞEHİR'],t:1,c:'genel'},
+{w:'SUSPUS',f:['SİNMEK','KONUŞMAK','SESSİZ','SUÇLU','CEVAP VERMEK'],t:0,c:'genel'},
+{w:'JANT',f:['ARABA','PARÇA','TEKERLEK','LASTİK','ÇELİK'],t:0,c:'genel'},
+{w:'MESULİYET',f:['SORUMLULUK','GÖREV','İLGİ','YÜKLENMEK','ÜSTLENMEK'],t:1,c:'genel'},
+{w:'PASAJ',f:['ÇARŞI','DÜKKAN','BEYOĞLU','ALIŞVERİŞ','KAPALI'],t:0,c:'genel'},
+{w:'NOEL BABA',f:['YILBAŞI','HEDİYE','REN GEYİĞİ','BACA','ARALIK'],t:1,c:'genel'},
+{w:'AT GÖZLÜĞÜ',f:['SABİT FİKİRLİ','DÜŞÜNMEK','BAKMAK','DAR','TUTUCU'],t:1,c:'genel'},
+{w:'BAŞA ÇIKMAK',f:['GÜÇ','YETMEK','BAŞARMAK','ÜSTESİNDEN GELMEK','DERT'],t:1,c:'genel'},
+{w:'LOKAL',f:['ANESTEZİ','ULUSLARARASI','DERNEK','GECE KULÜBÜ','YEREL'],t:0,c:'genel'},
+{w:'PİYON',f:['SATRANÇ','TAŞ','ŞAH','VEZİR','OYUN'],t:0,c:'genel'},
+{w:'ŞAHİN',f:['KARTAL','DOĞAN','KUŞ','YIRTICI','ARABA'],t:0,c:'genel'},
+{w:'FOBİ',f:['KORKU','ÖRÜMCEK','YÜKSEKLİK','AŞIRI','PANİK'],t:0,c:'genel'},
+{w:'VAKIF',f:['HAYIR İŞİ','BAĞIŞ','KURULUŞ','DERNEK','YARDIM'],t:0,c:'genel'},
+{w:'TOLERANS',f:['HOŞGÖRÜ','ANLAYIŞ','GÖSTERMEK','MÜSAMAHA','HATA'],t:1,c:'genel'},
+{w:'RASTGELE',f:['HERHANGİ','GELİŞİGÜZEL','SEÇMEK','SESLENMEK','BALIKÇI'],t:1,c:'genel'},
+{w:'AFİŞ',f:['ASMAK','DUVAR','KONSER','SİNEMA','FİLM'],t:0,c:'genel'},
+{w:'FONDÖTEN',f:['MAKYAJ','SÜRMEK','YÜZ','KAPATICI','PUDRA'],t:1,c:'genel'},
+{w:'TEDBİRLİ',f:['ÖNLEMEK','HAZIRLIKLI','ALMAK','ÖNCE','DÜŞÜNMEK'],t:1,c:'genel'},
+{w:'ÇAKIŞMAK',f:['ÜST ÜSTE','AYNI','ZAMAN','DENK GELMEK','KESİŞMEK'],t:1,c:'genel'},
+{w:'IZGARA',f:['MANGAL','PİŞİRMEK','ET','TAVUK','BARBEKÜ'],t:0,c:'genel'},
+{w:'FENG SHUI',f:['DEKORASYON','TARZ','UZAK DOĞU','MEKAN','EV'],t:1,c:'genel'},
+{w:'ORHAN PAMUK',f:['ROMAN','NOBEL','YAZAR','BENİM ADIM KIRMIZI','MASUMİYET MÜZESİ'],t:1,c:'genel'},
+{w:'HOROZLANMAK',f:['DAYILANMAK','KAFA TUTMAK','DİKLEŞMEK','KAVGA','CESARET'],t:1,c:'genel'},
+{w:'MEKİK ÇEKMEK',f:['KARIN KASI','EGZERSİZ','GÖBEK','SPOR','ŞINAV ÇEKMEK'],t:1,c:'genel'},
+{w:'OYUN HAVASI',f:['GÖBEK','DANS ETMEK','ORYANTAL','MÜZİK','EĞLENMEK'],t:1,c:'genel'},
+{w:'ELİ SIKI',f:['CİMRİ','PARA','HARCAMAK','BİRİKTİRMEK','TUTUMLU'],t:1,c:'genel'},
+{w:'GIDIK',f:['ÖPMEK','BEBEK','ÇENE','GERDAN','ŞİŞMAN'],t:0,c:'genel'},
+{w:'YETİNMEK',f:['AZ','ÇOK','İSTEMEK','İDARE ETMEK','SAHİP OLMAK'],t:1,c:'genel'},
+{w:'MAGMA',f:['YER ALTI','VOLKAN','ERİMEK','YANARDAĞ','LAV'],t:0,c:'genel'},
+{w:'KÖÇEK',f:['DANSÖZ','ORYANTAL','OYNAMAK','DÜĞÜN','ERKEK'],t:0,c:'genel'},
+{w:'JACK SPARROW',f:['JOHNY DEPP','KARAYİP','KORSAN','KAPTAN','FİLM'],t:1,c:'genel'},
+{w:'KISITLI',f:['İMKAN','AZ','SINIRLI','YOKLUK','OLANAK'],t:1,c:'genel'},
+{w:'NEJAT İŞLER',f:['AKTÖR','SİNEMA','DİZİ','BARDA','TELEVİZYON'],t:1,c:'genel'},
+{w:'PAÇANGA BÖREĞİ',f:['PASTIRMA','MEYHANE','MEZE','YEMEK','ARA SICAK'],t:1,c:'genel'},
+{w:'RİMEL',f:['GÖZ','MAKYAJ','KADIN','SÜRMEK','KİRPİK'],t:0,c:'genel'},
+{w:'KÜÇÜK DÜŞÜRMEK',f:['DALGA GEÇMEK','GÜLMEK','ALAY','AŞAĞILAMAK','UTANDIRMAK'],t:1,c:'genel'},
+{w:'HOVARDA',f:['ÇAPKIN','SEVGİLİ','GECE','PARA HARCAMAK','GÖNÜL'],t:1,c:'genel'},
+{w:'TEFLON',f:['EMAYE','TAVA','YAPIŞMAK','ÇELİK','ÇİZMEK'],t:0,c:'genel'},
+{w:'AVUÇ',f:['EL','AÇMAK','DİLENCİ','FAL','AYA'],t:0,c:'genel'},
+{w:'DAYANIKLI',f:['EŞYA','SAĞLAM','KIRILMAK','BOZULMAK','TÜKETİM'],t:1,c:'genel'},
+{w:'AVUCUNU YALAMAK',f:['ALMAK','KALMAK','KAYBETMEK','İSTEMEK','BİTMEK'],t:1,c:'genel'},
+{w:'UZANMAK',f:['YORGUN','HASTA','YATMAK','TV','DİNLENMEK'],t:1,c:'genel'},
+{w:'ENDAMLI',f:['UZUN','GÖSTERİŞLİ','BOYLU POSLU','GÜZEL','ZARAFET'],t:1,c:'genel'},
+{w:'NEON',f:['IŞIK','TABELA','RENKLİ','LAMBA','GAZ'],t:0,c:'genel'},
+{w:'BANLİYÖ',f:['TAŞRA','MERKEZ','UZAK','OTURMAK','TREN'],t:1,c:'genel'},
+{w:'SAF KAN',f:['AT','CİNS','IRK','ÖZELLİK','KARIŞMAK'],t:0,c:'genel'},
+{w:'İPUCU',f:['DEDEKTİF','POLİS','ÇÖZMEK','DELİL','ARAMAK'],t:0,c:'genel'},
+{w:'KÜRE',f:['DAİRE','FAL','DÜNYA','YUVARLAK','ŞEKİL'],t:0,c:'genel'},
+{w:'SAĞANAK',f:['YAĞMUR','HAVA','KAR','BULUT','ŞEMSİYE'],t:1,c:'genel'},
+{w:'LEHÇE',f:['DİL','KONUŞMAK','ŞİVE','AĞIZ','FARKLI'],t:0,c:'genel'},
+{w:'BAHSE GİRMEK',f:['İDDİA','AT YARIŞI','MAÇ','PARA','KUMAR'],t:1,c:'genel'},
+{w:'MAMA SANDALYESİ',f:['BEBEK','YEMEK','OTURMAK','YÜKSEK','ÇOCUK'],t:1,c:'genel'},
+{w:'TAARRUZ',f:['SALDIRI','ESKİ','SAVAŞ','EMRİ','HÜCUM'],t:1,c:'genel'},
+{w:'KULAK ZARI',f:['ORGAN','DUYMAK','PATLAMAK','YÜZ','BURUN'],t:1,c:'genel'},
+{w:'HIMBIL',f:['YAVAŞ','TEMBEL','UYUŞUK','HAREKET','ŞİŞMAN'],t:0,c:'genel'},
+{w:'REKABET',f:['HIRS','ÇEKİŞME','YARIŞMA','RAKİP','SPOR'],t:1,c:'genel'},
+{w:'FEMİNİST',f:['KADIN','HAK','SAVUNMAK','EŞİTLİK','HAREKET'],t:1,c:'genel'},
+{w:'ENDOSKOPİ',f:['AĞIZ','KAMERA','MİDE','BORU','SOKMAK'],t:1,c:'genel'},
+{w:'MİMİK',f:['YÜZ','ANLATMAK','İFADE','HAREKET','DUYGU'],t:0,c:'genel'},
+{w:'AFYON',f:['ŞEHİR','SUCUK','HAŞHAŞ','KAYMAK','PATLAMAK'],t:0,c:'genel'},
+{w:'NAİF',f:['SAF','HASSAS','DUYGUSAL','MASUM','İYİ NİYETLİ'],t:0,c:'genel'},
+{w:'KARBONHİDRAT',f:['KALORİ','EKMEK','DİYET','MAKARNA','PROTEİN'],t:1,c:'genel'},
+{w:'SENDROM',f:['BELİRTİ','HASTALIK','BUNALIM','PAZARTESİ','SIKINTI'],t:1,c:'genel'},
+{w:'KİNAYE',f:['İĞNELEME','DOLAYLI','İMA ETME','ÜSTÜ KAPALI','LAF DOKUNDURMAK'],t:0,c:'genel'},
+{w:'ÇİZMEYİ AŞMAK',f:['İLERİ GİTMEK','HADDİNİ AŞMAK','SINIR','BİLMEK','ÇİZGİ'],t:1,c:'genel'},
+{w:'TAVUKGÖĞSÜ',f:['TATLI','SÜT','MUHALLEBİ','KAZANDİBİ','YEMEK'],t:1,c:'genel'},
+{w:'BUZ DAĞI',f:['ICEBERG','TİTANİK','KUTUP','DENİZ','SOĞUK'],t:1,c:'genel'},
+{w:'DİSKO',f:['DANS','MÜZİK','EĞLENMEK','GECE','KULÜP'],t:0,c:'genel'},
+{w:'YENİYETME',f:['ÇOCUK','DELİKANLI','YAŞLI','GENÇ','YETİŞKİN'],t:1,c:'genel'},
+{w:'HORON',f:['KARADENİZ','LAZ','TULUM','TEPMEK','HALK OYUNU'],t:0,c:'genel'},
+{w:'MÜLAKAT',f:['SORU SORMAK','GÖRÜŞME','İŞE ALMAK','RÖPORTAJ','ÖZGEÇMİŞ'],t:1,c:'genel'},
+{w:'PİŞMANİYE',f:['YİYECEK','TEL TEL','TATLI','İZMİT','YOLCULUK'],t:1,c:'genel'},
+{w:'İMA ETMEK',f:['DOKUNDURMAK','DOĞRUDAN','DOLAYLI','SEZDİRMEK','SÖYLEMEK'],t:1,c:'genel'},
+{w:'STRAPLEZ',f:['BLUZ','ÜST','ASKI','OMUZ','DEKOLTE'],t:1,c:'genel'},
+{w:'AĞIR AKSAK',f:['YAVAŞ','DÜZENSİZ','HIZLI','DÖRTNALA','İLERLEMEK'],t:1,c:'genel'},
+{w:'ISMARLAMAK',f:['İSTEMEK','PARA','YEMEK','SİPARİŞ','ÖDEMEK'],t:1,c:'genel'},
+{w:'YALAP ŞAP',f:['ÜSTÜNKÖRÜ','GELİŞİGÜZEL','TEMİZLİK','İŞ','CEVAPLAMAK'],t:1,c:'genel'},
+{w:'ZONKLAMAK',f:['BAŞ AĞRISI','VURMAK','AĞRIMAK','ŞAKAK','BEYİN'],t:1,c:'genel'},
+{w:'KRİZ MASASI',f:['BELEDİYE','KURUL','FELAKET','DEPREM','OLUŞTURMAK'],t:1,c:'genel'},
+{w:'YIL DÖNÜMÜ',f:['KUTLAMA','EVLİLİK','ÖLÜM','GÜN','KURULUŞ'],t:1,c:'genel'},
+{w:'TANRI MİSAFİRİ',f:['KONUK','EV','GELMEK','BEKLEMEK','ANİDEN'],t:1,c:'genel'},
+{w:'MAHCUP',f:['ÇEKİNGEN','UTANGAÇ','GÜVENSİZ','RAHAT','GİRİŞKEN'],t:0,c:'genel'},
+{w:'ALAKART MÖNÜ',f:['AÇIK BÜFE','FİKS MÖNÜ','SEÇMEK','RESTORAN','YEMEK'],t:1,c:'genel'},
+{w:'KAMAROT',f:['GEMİ','YOLCU','SERVİS','GÖREVLİ','KAPTAN'],t:1,c:'genel'},
+{w:'JÖN TÜRKLER',f:['OSMANLI','MEŞRUTİYET','AYDIN','TOPLULUK','İTTİHAT VE TERAKKİ'],t:1,c:'genel'},
+{w:'EĞİK',f:['DÜZ','ÇİZGİ','DİK','YAMUK','DURMAK'],t:0,c:'genel'},
+{w:'SLOGAN',f:['ATMAK','MİTİNG','PARTİ','PROPAGANDA','SÖZ'],t:0,c:'genel'},
+{w:'KAFA TUTMAK',f:['KAVGA ETMEK','TARTIŞMAK','KARŞI GELMEK','BOYUN EĞMEK','DİKLENMEK'],t:1,c:'genel'},
+{w:'BOĞA',f:['HAYVAN','KIRMIZI','MATADOR','BURÇ','İSPANYA'],t:0,c:'genel'},
+{w:'PASKALYA',f:['BAHAR','ÇÖREK','YUMURTA','HRİSTİYAN','BAYRAM'],t:1,c:'genel'},
+{w:'ABSÜRT',f:['SAÇMA','KOMEDİ','UYUMSUZ','TUTARSIZ','FİLM'],t:0,c:'genel'},
+{w:'ATEŞKES',f:['SAVAŞ','BARIŞ','BİTİRMEK','TESLİM OLMAK','ANLAŞMAK'],t:1,c:'genel'},
+{w:'KÖSE',f:['KILSIZ','BIYIK','SAKAL','TÜY','TRAŞ'],t:0,c:'genel'},
+{w:'AĞAÇKAKAN',f:['HAYVAN','KUŞ','GAGA','OYMAK','DELMEK'],t:1,c:'genel'},
+{w:'KITLAMA',f:['ÇAY','İÇMEK','ŞEKER','ISIRMAK','ERZURUM'],t:1,c:'genel'},
+{w:'REST ÇEKMEK',f:['POKER','HEPSİ','PARA','SON VERMEK','KARŞI ÇIKMAK'],t:1,c:'genel'},
+{w:'KONTRBAS',f:['ENSTRÜMAN','MÜZİK','ALET','KEMAN','YAYLI'],t:1,c:'genel'},
+{w:'WOLVERINE',f:['KURT ADAM','PENÇE','X-MEN','MUTASYON','MARVEL'],t:1,c:'genel'},
+{w:'RACON',f:['KESMEK','KABADAYI','ARGO','FİYAKA','DELİKANLI'],t:0,c:'genel'},
+{w:'TIRSMAK',f:['KORKMAK','ÇEKİNMEK','ÜRKMEK','CESARET','BIRAKMAK'],t:1,c:'genel'},
+{w:'BONO',f:['U2','SOLİST','TAHVİL','KAĞIT','HİSSE SENEDİ'],t:0,c:'genel'},
+{w:'GEORGE LUCAS',f:['YÖNETMEN','SİNEMA','STAR WARS','INDIANA JONES','FİLM'],t:1,c:'genel'},
+{w:'KOLAÇAN ETMEK',f:['DEVRİYE','DOLAŞMAK','ETRAF','BAKMAK','KONTROL'],t:1,c:'genel'},
+{w:'ZULA',f:['SAKLAMAK','GİZLİ','KOYMAK','KAÇAK','MAL'],t:0,c:'genel'},
+{w:'LİNYİT',f:['KÖMÜR','MADEN','ZONGULDAK','SOBA','YANMAN'],t:0,c:'genel'},
+{w:'İHTİMAL',f:['BELKİ','OLASI','VERMEMEK','OLMAK','UMUT'],t:1,c:'genel'},
+{w:'EFOR',f:['GÜÇ','ÇABA','HARCAMAK','KALP','TEST'],t:0,c:'genel'},
+{w:'DOLAP BEYGİRİ',f:['DÖNMEK','BAĞLAMAK','AT','EŞEK','SÜREKLİ'],t:1,c:'genel'},
+{w:'BUFALO',f:['SIĞIR','AMERİKA','SÜRÜ','KOVBOY','BİZON'],t:0,c:'genel'},
+{w:'SIĞINAK',f:['SAVAŞ','BOMBA','SAKLANMAK','KAÇMAK','YER ALTI'],t:1,c:'genel'},
+{w:'ALYANS',f:['EVLİLİK','YÜZÜK','KARI-KOCA','PARMAK','TAKMAK'],t:0,c:'genel'},
+{w:'ALKOLİK',f:['İÇKİ','GÜN','AYYAŞ','ALIŞKANLIK','BAĞIMLI'],t:1,c:'genel'},
+{w:'ATARİ',f:['BİLGİSAYAR','ESKİ','OYUN','BASİT','PROGRAM'],t:0,c:'genel'},
+{w:'MAYTAP',f:['IŞIK','KIVILCIM','PASTA','DOĞUM GÜNÜ','YAKMAK'],t:0,c:'genel'},
+{w:'İŞARET DİLİ',f:['SAĞIR','KONUŞMAK','EL','HAREKET','İLETİŞİM'],t:1,c:'genel'},
+{w:'TAHTAKALE',f:['İSTANBUL','ALIŞVERİŞ','ÇARŞI','UCUZ','EMİNÖNÜ'],t:1,c:'genel'},
+{w:'RÖNTGENCİ',f:['DİKİZ','GÖZETLEMEK','SAPIK','GİZLİ','BAKMAK'],t:1,c:'genel'},
+{w:'KEMAL SUNAL',f:['SİNEMA','KOMİK','OYUNCU','HABABAM SINIFI','İNEK ŞABAN'],t:1,c:'genel'},
+{w:'GÖRGÜ TANIĞI',f:['DELİL','OLAY','MAHKEME','ÇAĞIRMAK','CİNAYET'],t:1,c:'genel'},
+{w:'ULAK',f:['HABER','TAŞIMAK','GÖTÜRMEK','POSTACI','AT'],t:0,c:'genel'},
+{w:'PÖTİBÖR',f:['BİSKÜVİ','DİKDÖRTGEN','ÇAY','TATLI','KURABİYE'],t:1,c:'genel'},
+{w:'KAÇIN KURASI',f:['GÖRMEK','GEÇİRMEK','ALDANMAK','UYANIK','TECRÜBELİ'],t:1,c:'genel'},
+{w:'ZIMBA',f:['TUTTURMAK','KIRTASİYE','TEL','DELGEÇ','KAĞIT'],t:0,c:'genel'},
+{w:'PASPAL',f:['KOKOŞ','DAĞINIK','BAKIMSIZ','ŞIK','GİYİNMEK'],t:0,c:'genel'},
+{w:'ÇİZME',f:['AYAKKABI','UZUN','KADIN','ETEK','BOT'],t:0,c:'genel'},
+{w:'DİDİKLEMEK',f:['İNCELEMEK','ARAMAK','DETAY','SORUŞTURMAK','PARÇALAMAK'],t:1,c:'genel'},
+{w:'PİYAZ',f:['SALATA','KÖFTE','KURU FASULYE','HAŞLAMAK','SOĞAN'],t:0,c:'genel'},
+{w:'TOMBALA',f:['YILBAŞI','OYUN','ÇİNKO','ÇEKMEK','KART'],t:1,c:'genel'},
+{w:'METRES',f:['KARI-KOCA','EVLİ','ALDATMAK','YASAK','İLİŞKİ'],t:0,c:'genel'},
+{w:'KISA FİLM',f:['SİNEMA','UZUN','FESTİVAL','DAKİKA','YÖNETMEN'],t:1,c:'genel'},
+{w:'ÇİFT KAŞARLI',f:['TOST','YEMEK','PEYNİR','UZAMAK','SUCUK'],t:1,c:'genel'},
+{w:'KOSTA RİKA',f:['ÜLKE','AMERİKA','ORTA','PANAMA','OKYANUS'],t:1,c:'genel'},
+{w:'DAZLAK',f:['KEL','SAÇ','DÖKÜLMEK','NEO-NAZİ','KAZITMAK'],t:0,c:'genel'},
+{w:'LODOS',f:['RÜZGAR','POYRAZ','ESMEK','DENİZ','KARAYEL'],t:0,c:'genel'},
+{w:'TAC MAHAL',f:['HİNDİSTAN','TARİHİ','SARAY','BİNA','KUBBE'],t:1,c:'genel'},
+{w:'KOLAJ',f:['RESİM','BİRLEŞTİRMEK','KAĞIT','KESMEK','YAPIŞTIRMAK'],t:0,c:'genel'},
+{w:'MANAVGAT ŞELALESİ',f:['DÖKÜLMEK','ANTALYA','SU','AKMAK','NEHİR'],t:1,c:'genel'},
+{w:'ANTONI GAUDI',f:['MİMAR','İSPANYA','BARCELONA','SAGRADA FAMILIA','TASARIM'],t:1,c:'genel'},
+{w:'KEKLİK',f:['HAYVAN','KUŞ','AVLAMAK','GÜVERCİN','VURMAK'],t:0,c:'genel'},
+{w:'ERZAK',f:['YİYECEK','YOLCULUK','SAKLAMAK','KONSERVE','KİLER'],t:0,c:'genel'},
+{w:'TANTANA',f:['ŞAMATA','GÜRÜLTÜ','OLAY','GÖRKEMLİ','ŞAŞAALI'],t:1,c:'genel'},
+{w:'SELEKTÖR',f:['ARABA','FAR','IŞIK','YAKMAK','UYARMAK'],t:1,c:'genel'},
+{w:'ALIN TERİ',f:['ÇALIŞMAK','EMEK','DÖKMEK','ZAHMET','UĞRAŞMAK'],t:1,c:'genel'},
+{w:'ADAM ASMACA',f:['OYUN','KELİME','BULMAK','ÇİZMEK','HARF'],t:1,c:'genel'},
+{w:'SEMİNER',f:['KONUŞMA','SUNUM','KONFERANS','EĞİTİM','TOPLANTI'],t:1,c:'genel'},
+{w:'ELİPS',f:['ŞEKİL','YUVARLAK','DAİRE','DÜNYA','ÇEMBER'],t:0,c:'genel'},
+{w:'BASAMAK',f:['MERDİVEN','ÇIKMAK','ASANSÖR','KULLANMAK','AŞAMA'],t:1,c:'genel'},
+{w:'KAVŞAK',f:['DÖRT YOL','ARABA','KESİŞMEK','BİRLEŞMEK','DÖNMEK'],t:0,c:'genel'},
+{w:'ALTYAZI',f:['SİNEMA','ÇEVİRİ','FİLM','DUBLAJ','İNGİLİZCE'],t:1,c:'genel'},
+{w:'ALATURKA',f:['ALAFRANGA','MÜZİK','ESKİ','GELENEK','TUVALET'],t:1,c:'genel'},
+{w:'KANAVİÇE',f:['ELİŞİ','KASNAK','İPLİK','İĞNE','BEZ'],t:1,c:'genel'},
+{w:'DİSPANSER',f:['HASTANE','DOKTOR','VEREM','SAĞLIK OCAĞI','POLİKLİNİK'],t:1,c:'genel'},
+{w:'CİNSİYET',f:['KADIN','ERKEK','DİŞİ','DOĞMAK','KİMLİK'],t:1,c:'genel'},
+{w:'LORD',f:['LEYDİ','BARON','UNVAN','İNGİLTERE','ASALET'],t:0,c:'genel'},
+{w:'REZERV',f:['PETROL','SAKLAMAK','YEDEK','BİRİKTİRMEK','DÖVİZ'],t:0,c:'genel'},
+{w:'VİCDAN AZABI',f:['ÇEKMEK','DUYMAK','ÜZÜLMEK','ACI','KÖTÜ'],t:1,c:'genel'},
+{w:'DOMİNO',f:['TAŞ','OYUN','DEVİRMEK','DİKDÖRTGEN','NOKTA'],t:0,c:'genel'},
+{w:'PİLATES',f:['SPOR','EGZERSİZ','TOP','YOGA','ESNETMEK'],t:1,c:'genel'},
+{w:'ZIRH',f:['ŞÖVALYE','KORUMAK','SAVAŞ','METAL','GİYMEK'],t:0,c:'genel'},
+{w:'GO-KART',f:['KÜÇÜK','FORMULA 1','MOTOR','YARIŞ','PİST'],t:0,c:'genel'},
+{w:'SABAN',f:['TARLA','SÜRMEK','ÇİFTÇİ','TARIM','HAYVAN'],t:0,c:'genel'},
+{w:'KAVUK',f:['OSMANLI','SARIK','BAŞLIK','ŞAPKA','PADİŞAH'],t:0,c:'genel'},
+{w:'TIRIS',f:['AT','YÜRÜMEK','DÖRTNALA','HIZLI','VIZ GELMEK'],t:0,c:'genel'},
+{w:'GICIRTI',f:['SES','KAPI','YAĞLAMAK','TAHTA','PAS'],t:1,c:'genel'},
+{w:'KONFORLU',f:['RAHAT','DÖŞEMEK','MOBİLYA','OTEL','EV'],t:1,c:'genel'},
+{w:'AŞAĞI YUKARI',f:['YAKLAŞIK','TAHMİNİ','TAM','İNMEK','ÇIKMAK'],t:1,c:'genel'},
+{w:'KAHVE',f:['İÇECEK','FİNCAN','KAFEİN','SICAK','ESPRESSO'],t:0,c:'genel'},
+{w:'OKUL',f:['ÖĞRENCİ','ÖĞRETMEN','DERS','SINIF','EĞİTİM'],t:0,c:'genel'},
+{w:'DOKTOR',f:['HASTANE','HASTA','TEDAVİ','İLAÇ','MUAYENE'],t:0,c:'genel'},
+{w:'UÇAK',f:['KANAT','PİLOT','HAVA','UÇMAK','YOLCULUK'],t:0,c:'genel'},
+{w:'TREN',f:['RAY','VAGON','İSTASYON','YOLCULUK','LOKOMOTİF'],t:0,c:'genel'},
+{w:'BİSİKLET',f:['PEDAL','TEKERLEK','ZİNCİR','SÜRMEK','DENGE'],t:1,c:'genel'},
+{w:'YÜZME',f:['SU','HAVUZ','KULAÇ','SPOR','NEFES'],t:0,c:'genel'},
+{w:'KOŞU',f:['HIZ','MARATON','SPOR','AYAK','TER'],t:0,c:'genel'},
+{w:'ORMAN',f:['AĞAÇ','DOĞA','YEŞİL','HAYVAN','GÖLGE'],t:0,c:'genel'},
+{w:'YAĞMUR',f:['DAMLA','BULUT','ISLAK','ŞEMSİYE','YAĞMAK'],t:0,c:'genel'},
+{w:'RÜZGAR',f:['ESMEK','HAVA','SERİN','HIZ','FIRTINA'],t:0,c:'genel'},
+{w:'MÜZİK',f:['RİTİM','MELODİ','NOTA','ŞARKI','SES'],t:0,c:'genel'},
+{w:'PİYANO',f:['TUŞ','NOTA','ÇALMAK','MÜZİK','PEDAL'],t:0,c:'genel'},
+{w:'FİLM',f:['KAMERA','SAHNE','OYUNCU','YÖNETMEN','SİNEMA'],t:0,c:'genel'},
+{w:'FOTOĞRAF',f:['KAMERA','LENS','IŞIK','ÇEKMEK','GÖRÜNTÜ'],t:1,c:'genel'},
+{w:'ROBOT',f:['MAKİNE','SENSÖR','OTOMASYON','YAPAY','TEKNOLOJİ'],t:0,c:'genel'},
+{w:'UZAY',f:['YILDIZ','GEZEGEN','GALAKSİ','ASTRONOT','EVREN'],t:0,c:'genel'},
+{w:'OYUN',f:['EĞLENCE','SEVİYE','PUAN','KAZANMAK','KONTROL'],t:0,c:'genel'},
+{w:'TERMODİNAMİK',f:['ISI','ENERJİ','SICAKLIK','SİSTEM','DENGE'],t:1,c:'genel'},
+{w:'KUANTUM',f:['PARÇACIK','ATOM','ENERJİ','BELİRSİZLİK','FİZİK'],t:1,c:'genel'},
+{w:'FOTOSENTEZ',f:['BİTKİ','GÜNEŞ','KLOROFİL','OKSİJEN','KARBON'],t:1,c:'genel'},
+{w:'ALGORİTMA',f:['ADIM','İŞLEM','ÇÖZÜM','KOD','MANTIK'],t:1,c:'genel'},
+{w:'STRATEJİ',f:['PLAN','HEDEF','TAKTİK','KARAR','UZUN VADELİ'],t:1,c:'genel'},
+{w:'MİMARİ',f:['YAPI','BİNA','TASARIM','PLAN','ESTETİK'],t:0,c:'genel'},
+{w:'EPİSTEMOLOJİ',f:['BİLGİ','FELSEFE','DOĞRULUK','DÜŞÜNCE','TEORİ'],t:1,c:'genel'},
+{w:'ENTROPİ',f:['DÜZENSİZLİK','ENERJİ','SİSTEM','FİZİK','KAOS'],t:1,c:'genel'},
+{w:'NÖRON',f:['SİNİR','BEYİN','HÜCRE','ELEKTRİK','BAĞLANTI'],t:0,c:'genel'},
+{w:'KRİPTOGRAFİ',f:['ŞİFRE','VERİ','GÜVENLİK','KOD','MESAJ'],t:1,c:'genel'},
+{w:'SİBERNETİK',f:['SİSTEM','KONTROL','MAKİNE','GERİ BİLDİRİM','TEKNOLOJİ'],t:1,c:'genel'},
+{w:'NANOTEKNOLOJİ',f:['ATOM','KÜÇÜK','TEKNOLOJİ','BİLİM','MALZEME'],t:1,c:'genel'},
+{w:'GLOBALLEŞME',f:['DÜNYA','EKONOMİ','TİCARET','KÜLTÜR','ULUSLARARASI'],t:1,c:'genel'},
+{w:'HİPOTEZ',f:['TAHMİN','BİLİM','DENEY','TEORİ','SONUÇ'],t:1,c:'genel'},
+{w:'OPTİK',f:['IŞIK','MERCEK','GÖRÜNTÜ','FİZİK','KIRILMA'],t:0,c:'genel'},
+{w:'EVRİM',f:['DEĞİŞİM','TÜR','DOĞA','GELİŞİM','DARWİN'],t:0,c:'genel'},
+{w:'METAFOR',f:['BENZETME','ANLAM','MECAZ','EDEBİYAT','İFADE'],t:1,c:'genel'},
+{w:'PARADİGMA',f:['MODEL','DÜŞÜNCE','SİSTEM','YAKLAŞIM','TEORİ'],t:1,c:'genel'},
+{w:'ANALİTİK',f:['VERİ','ANALİZ','MANTIK','İNCELEME','SONUÇ'],t:1,c:'genel'},
+{w:'SİMÜLASYON',f:['MODEL','SANAL','DENEY','SİSTEM','TEST'],t:1,c:'genel'},
+{w:'VERİTABANI',f:['KAYIT','VERİ','TABLO','SORGU','SİSTEM'],t:1,c:'genel'},
+{w:'SUNUCU',f:['AĞ','VERİ','HİZMET','SİSTEM','BAĞLANTI'],t:0,c:'genel'},
+{w:'İSTEMCİ',f:['KULLANICI','BAĞLANTI','AĞ','TALEP','SİSTEM'],t:1,c:'genel'},
+{w:'ARAYÜZ',f:['EKRAN','KULLANICI','TASARIM','ETKİLEŞİM','SİSTEM'],t:0,c:'genel'},
+{w:'PROTOKOL',f:['KURAL','İLETİŞİM','AĞ','VERİ','STANDART'],t:1,c:'genel'},
+{w:'ENTEGRASYON',f:['SİSTEM','BAĞLAMAK','UYUM','BİRLEŞİM','SÜREÇ'],t:1,c:'genel'},
+{w:'OPTİMİZASYON',f:['EN İYİ','ÇÖZÜM','VERİM','HESAPLAMA','MODEL'],t:1,c:'genel'},
+{w:'PİPELİNE',f:['İŞLEM','VERİ','AKIŞ','SİSTEM','AŞAMA'],t:1,c:'genel'},
+{w:'DEBUG',f:['HATA','KOD','DÜZELTMEK','PROGRAM','ANALİZ'],t:0,c:'genel'},
+{w:'FRAMEWORK',f:['YAPI','YAZILIM','SİSTEM','GELİŞTİRME','KÜTÜPHANE'],t:1,c:'genel'},
+{w:'HEURİSTİK',f:['TAHMİN','YÖNTEM','ÇÖZÜM','YAKLAŞIM','PROBLEM'],t:1,c:'genel'},
+{w:'ONTOLOJİ',f:['VARLIK','FELSEFE','GERÇEKLİK','KATEGORİ','KAVRAM'],t:1,c:'genel'},
+{w:'FENOMENOLOJİ',f:['DENEYİM','BİLİNÇ','ALGI','FELSEFE','ÖZNEL'],t:1,c:'genel'},
+{w:'SİNAPS',f:['BAĞLANTI','NÖRON','SİNİR','İLETİM','BEYİN'],t:0,c:'genel'},
+{w:'PLAZMA',f:['GAZ','İYON','ENERJİ','FİZİK','SICAKLIK'],t:0,c:'genel'},
+{w:'KARADELİK',f:['ÇEKİM','UZAY','IŞIK','KÜTLE','EVREN'],t:1,c:'genel'},
+{w:'SÜPERNOVA',f:['YILDIZ','PATLAMA','UZAY','ENERJİ','GALAKSİ'],t:1,c:'genel'},
+{w:'KOZMOLOJİ',f:['EVREN','UZAY','GALAKSİ','TEORİ','BİLİM'],t:1,c:'genel'},
+{w:'ASTROFİZİK',f:['YILDIZ','UZAY','FİZİK','ENERJİ','GALAKSİ'],t:1,c:'genel'},
+{w:'GENOMİK',f:['DNA','GEN','ANALİZ','BİYOLOJİ','VERİ'],t:1,c:'genel'},
+{w:'PROTEOMİK',f:['PROTEİN','ANALİZ','HÜCRE','BİYOLOJİ','YAPI'],t:1,c:'genel'},
+{w:'EKOSİSTEM',f:['DOĞA','CANLI','DENGE','ÇEVRE','SİSTEM'],t:1,c:'genel'},
+{w:'JEOTERMAL',f:['ISI','YER ALTI','ENERJİ','KAYNAK','SICAKLIK'],t:1,c:'genel'},
+{w:'HİDROPONİK',f:['BİTKİ','SU','TARIM','YETİŞTİRME','SİSTEM'],t:1,c:'genel'},
+{w:'SÜRDÜRÜLEBİLİRLİK',f:['ÇEVRE','KAYNAK','GELECEK','DOĞA','DENGE'],t:1,c:'genel'},
+{w:'İKLİM MODELİ',f:['HAVA','TAHMİN','VERİ','ATMOSFER','ANALİZ'],t:1,c:'genel'},
+{w:'ATMOSFER',f:['HAVA','GAZ','GÖKYÜZÜ','BASINÇ','DÜNYA'],t:1,c:'genel'},
+{w:'STRATOSFER',f:['KATMAN','ATMOSFER','YÜKSEKLİK','OZON','HAVA'],t:1,c:'genel'},
+{w:'TROPOSFER',f:['HAVA','BULUT','ATMOSFER','YAĞMUR','KATMAN'],t:1,c:'genel'},
+{w:'İYONOSFER',f:['ELEKTRİK','ATMOSFER','SİNYAL','DALGA','KATMAN'],t:1,c:'genel'},
+{w:'MANYETOSFER',f:['MANYETİK','ALAN','DÜNYA','KORUMA','UZAY'],t:1,c:'genel'},
+{w:'EKVATÖR',f:['DÜNYA','ÇİZGİ','SICAK','COĞRAFYA','ENLEM'],t:1,c:'genel'},
+{w:'MERİDYEN',f:['BOYLAM','HARİTA','DÜNYA','ÇİZGİ','KOORDİNAT'],t:1,c:'genel'},
+{w:'HARİTA',f:['YÖN','YER','ÇİZİM','COĞRAFYA','ÖLÇEK'],t:0,c:'genel'},
+{w:'ATLAS',f:['HARİTA','KİTAP','COĞRAFYA','DÜNYA','SAYFA'],t:0,c:'genel'},
+{w:'NAVİGASYON',f:['YÖN','ROTA','YOL','HARİTA','SİSTEM'],t:1,c:'genel'},
+{w:'YÖRÜNGE',f:['UZAY','DÖNMEK','GEZEGEN','HAREKET','ÇEKİM'],t:1,c:'genel'},
+{w:'SPEKTRUM',f:['IŞIK','RENK','DALGA','ARALIK','FİZİK'],t:1,c:'genel'},
+{w:'PRİZMA',f:['IŞIK','RENK','KIRILMA','CAM','OPTİK'],t:0,c:'genel'},
+{w:'MANYETİZMA',f:['MIKNATIS','ALAN','KUVVET','FİZİK','ÇEKİM'],t:1,c:'genel'},
+{w:'ATOM',f:['PROTON','ELEKTRON','ÇEKİRDEK','YAPI','FİZİK'],t:0,c:'genel'},
+{w:'MOLEKÜL',f:['ATOM','BAĞ','KİMYA','YAPI','BİRLEŞİM'],t:1,c:'genel'},
+{w:'PROTON',f:['POZİTİF','ÇEKİRDEK','ATOM','PARÇACIK','YÜK'],t:0,c:'genel'},
+{w:'ELEKTRON',f:['NEGATİF','ATOM','YÖRÜNGE','PARÇACIK','YÜK'],t:1,c:'genel'},
+{w:'NÖTRON',f:['YÜKSÜZ','ÇEKİRDEK','ATOM','PARÇACIK','KÜTLE'],t:0,c:'genel'},
+{w:'İZOTOP',f:['ATOM','NÖTRON','TÜR','KİMYA','YAPI'],t:0,c:'genel'},
+{w:'REAKTÖR',f:['ENERJİ','NÜKLEER','ÜRETİM','SİSTEM','GÜÇ'],t:1,c:'genel'},
+{w:'MOMENTUM',f:['HAREKET','KÜTLE','HIZ','FİZİK','ETKİ'],t:1,c:'genel'},
+{w:'LABORATUVAR',f:['DENEY','BİLİM','TEST','CİHAZ','ANALİZ'],t:1,c:'genel'},
+{w:'MİKROSKOP',f:['BÜYÜTMEK','HÜCRE','LENS','GÖRÜNTÜ','BİLİM'],t:1,c:'genel'},
+{w:'FORMÜL',f:['MATEMATİK','İFADE','DENKLEM','ÇÖZÜM','HESAP'],t:0,c:'genel'},
+{w:'TEOREM',f:['MATEMATİK','KANIT','SONUÇ','TEORİ','İFADE'],t:0,c:'genel'},
+{w:'AKSİYOM',f:['KABUL','MATEMATİK','TEMEL','KURAL','ÖNERME'],t:1,c:'genel'},
+{w:'HİPOTENÜS',f:['ÜÇGEN','KENAR','MATEMATİK','GEOMETRİ','UZUN'],t:1,c:'genel'},
+{w:'LOGARİTMA',f:['MATEMATİK','FONKSİYON','HESAP','ÜS','DEĞER'],t:1,c:'genel'},
+{w:'MATRİS',f:['TABLO','SAYI','MATEMATİK','SATIR','SÜTUN'],t:0,c:'genel'},
+{w:'YASTIK',f:['BAŞ','UYKU','YUMUŞAK','YATAK','DİNLENMEK'],t:0,c:'genel'},
+{w:'BATTANİYE',f:['SICAK','KIŞ','ÖRTÜ','YATAK','UYKU'],t:1,c:'genel'},
+{w:'TABAK',f:['YEMEK','SERVİS','MUTFAK','YUVARLAK','PORSELEN'],t:0,c:'genel'},
+{w:'ÇATAL',f:['YEMEK','DİŞ','MUTFAK','KAŞIK','BIÇAK'],t:0,c:'genel'},
+{w:'BIÇAK',f:['KESMEK','KESKİN','MUTFAK','ALET','YEMEK'],t:0,c:'genel'},
+{w:'FIRIN',f:['PİŞİRMEK','SICAK','MUTFAK','YEMEK','ELEKTRİK'],t:0,c:'genel'},
+{w:'TENCERE',f:['YEMEK','PİŞİRMEK','OCAK','KAP','MUTFAK'],t:1,c:'genel'},
+{w:'TAVA',f:['KIZARTMAK','YAĞ','OCAK','YEMEK','MUTFAK'],t:0,c:'genel'},
+{w:'ŞİŞE',f:['İÇECEK','KAP','PLASTİK','CAM','SU'],t:0,c:'genel'},
+{w:'CÜZDAN',f:['PARA','KART','CEP','DERİ','KİMLİK'],t:0,c:'genel'},
+{w:'TERLİK',f:['EV','RAHAT','AYAK','GİYMEK','YAZ'],t:0,c:'genel'},
+{w:'PANTOLON',f:['BACAK','GİYSİ','KEMER','KOT','GİYİNMEK'],t:1,c:'genel'},
+{w:'TİŞÖRT',f:['ÜST','KISA KOL','YAZ','PAMUK','GİYSİ'],t:0,c:'genel'},
+{w:'MONT',f:['KIŞ','KALIN','SOĞUK','GİYSİ','DIŞ'],t:0,c:'genel'},
+{w:'GÖZLÜK',f:['GÖZ','CAM','GÖRMEK','ÇERÇEVE','NUMARA'],t:0,c:'genel'},
+{w:'ÇORAP',f:['AYAK','ÇİFT','GİYSİ','KIŞ','SICAK'],t:0,c:'genel'},
+{w:'HAVLU',f:['KURULANMAK','BANYO','SU','YUMUŞAK','BEZ'],t:0,c:'genel'},
+{w:'SABUN',f:['TEMİZLİK','KÖPÜK','EL','HİJYEN','BANYO'],t:0,c:'genel'},
+{w:'ŞAMPUAN',f:['SAÇ','YIKAMAK','KÖPÜK','TEMİZLİK','BANYO'],t:1,c:'genel'},
+{w:'AYNA',f:['YANSIMA','YÜZ','CAM','BAKMAK','GÖRÜNTÜ'],t:0,c:'genel'},
+{w:'TARAK',f:['SAÇ','DÜZELTMEK','DİŞ','BAKIM','FIRÇA'],t:0,c:'genel'},
+{w:'PERDE',f:['PENCERE','KAPATMAK','KUMAŞ','GÜNEŞ','EV'],t:0,c:'genel'},
+{w:'HALI',f:['YER','YUMUŞAK','DESEN','ODA','EV'],t:0,c:'genel'},
+{w:'SEHPA',f:['KÜÇÜK','MASA','SALON','ORTA','EŞYA'],t:0,c:'genel'},
+{w:'DOLAP',f:['SAKLAMAK','RAF','KAPI','KIYAFET','EV'],t:0,c:'genel'},
+{w:'KUTU',f:['SAKLAMAK','KAPAK','KARTON','EŞYA','KAP'],t:0,c:'genel'},
+{w:'POŞET',f:['PLASTİK','TAŞIMAK','ALIŞVERİŞ','TORBA','HAFİF'],t:0,c:'genel'},
+{w:'MARKET',f:['ALIŞVERİŞ','ÜRÜN','KASA','RAF','PARA'],t:0,c:'genel'},
+{w:'KASAP',f:['ET','BIÇAK','SATIŞ','DÜKKAN','KESMEK'],t:0,c:'genel'},
+{w:'MANAV',f:['SEBZE','MEYVE','TAZE','SATIŞ','DÜKKAN'],t:0,c:'genel'},
+{w:'GARSON',f:['RESTORAN','SERVİS','SİPARİŞ','MASA','YEMEK'],t:0,c:'genel'},
+{w:'AŞÇI',f:['YEMEK','PİŞİRMEK','MUTFAK','RESTORAN','ŞEF'],t:0,c:'genel'},
+{w:'HEMŞİRE',f:['HASTANE','HASTA','BAKIM','İĞNE','DOKTOR'],t:1,c:'genel'},
+{w:'ECZACI',f:['İLAÇ','ECZANE','REÇETE','SATIŞ','SAĞLIK'],t:0,c:'genel'},
+{w:'ÖĞRETMEN',f:['DERS','OKUL','ÖĞRENCİ','EĞİTİM','SINIF'],t:1,c:'genel'},
+{w:'ÖĞRENCİ',f:['OKUL','DERS','SINAV','ÖĞRENMEK','SINIF'],t:1,c:'genel'},
+{w:'POLİS',f:['GÜVENLİK','SUÇ','ŞEHİR','ÜNİFORMA','YAKALAMAK'],t:0,c:'genel'},
+{w:'İTFAİYE',f:['YANGIN','SU','SÖNDÜRMEK','ACİL','ARAÇ'],t:1,c:'genel'},
+{w:'ŞOFÖR',f:['ARABA','SÜRMEK','DİREKSİYON','YOL','ARAÇ'],t:0,c:'genel'},
+{w:'PİLOT',f:['UÇAK','GÖKYÜZÜ','UÇMAK','KOKPİT','SEYAHAT'],t:0,c:'genel'},
+{w:'HOSTES',f:['UÇAK','YOLCU','SERVİS','KABİN','UÇUŞ'],t:0,c:'genel'},
+{w:'MİMAR',f:['BİNA','ÇİZİM','PROJE','TASARIM','YAPI'],t:0,c:'genel'},
+{w:'MÜHENDİS',f:['TEKNİK','PROJE','HESAP','ÇÖZÜM','YAPI'],t:1,c:'genel'},
+{w:'YAZAR',f:['KİTAP','YAZMAK','ROMAN','HİKAYE','KALEM'],t:0,c:'genel'},
+{w:'ŞAİR',f:['ŞİİR','DUYGU','YAZMAK','EDEBİYAT','MISRA'],t:0,c:'genel'},
+{w:'MÜZİSYEN',f:['MÜZİK','ENSTRÜMAN','SAHNE','SES','SANAT'],t:1,c:'genel'},
+{w:'OYUNCU',f:['FİLM','ROL','SAHNE','TİYATRO','KAMERA'],t:0,c:'genel'},
+{w:'SPORCU',f:['SPOR','YARIŞ','ANTRENMAN','PERFORMANS','SAĞLIK'],t:0,c:'genel'},
+{w:'HAKEM',f:['MAÇ','KARAR','KURAL','DÜDÜK','OYUN'],t:0,c:'genel'},
+{w:'TAKIM',f:['GRUP','OYUNCU','BİRLİKTE','MAÇ','SPOR'],t:0,c:'genel'},
+{w:'BASKETBOL',f:['TOP','POTA','SAHA','SAYI','OYUN'],t:1,c:'genel'},
+{w:'VOLEYBOL',f:['FİLE','TOP','SERVİS','SAHA','TAKIM'],t:1,c:'genel'},
+{w:'TENİS',f:['RAKET','TOP','KORT','SERVİS','OYUN'],t:0,c:'genel'},
+{w:'KAYAK',f:['KAR','DAĞ','KAYMAK','KIŞ','SPOR'],t:0,c:'genel'},
+{w:'TATİL',f:['DİNLENMEK','YAZ','DENİZ','SEYAHAT','OTEL'],t:0,c:'genel'},
+{w:'OTEL',f:['ODA','KONAKLAMA','RESEPSİYON','YATAK','TATİL'],t:0,c:'genel'},
+{w:'OTOBÜS',f:['YOLCU','DURAK','ŞEHİR','ULAŞIM','ARAÇ'],t:0,c:'genel'},
+{w:'TAKSİ',f:['ARABA','ÜCRET','YOLCU','ŞEHİR','SÜRÜCÜ'],t:0,c:'genel'},
+{w:'PARK',f:['AĞAÇ','YÜRÜMEK','BANK','YEŞİL','ÇOCUK'],t:0,c:'genel'},
+{w:'BAHÇE',f:['ÇİÇEK','TOPRAK','SULAMAK','BİTKİ','EV'],t:0,c:'genel'},
+{w:'NEHİR',f:['SU','AKMAK','UZUN','KÖPRÜ','DOĞA'],t:0,c:'genel'},
+{w:'ŞELALE',f:['SU','YÜKSEK','AKMAK','DOĞA','DÜŞMEK'],t:0,c:'genel'},
+{w:'PLAJ',f:['DENİZ','KUM','GÜNEŞ','TATİL','ŞEZLONG'],t:0,c:'genel'},
+{w:'ŞEMSİYE',f:['GÜNEŞ','GÖLGE','AÇMAK','YAĞMUR','PLAJ'],t:1,c:'genel'},
+{w:'DONDURMA',f:['SOĞUK','TATLI','YAZ','KÜLAH','ERİMEK'],t:1,c:'genel'},
+{w:'ŞEKER',f:['TATLI','BEYAZ','KRİSTAL','ÇAY','YEMEK'],t:0,c:'genel'},
+{w:'DOMATES',f:['KIRMIZI','SEBZE','SALATA','SULU','YEMEK'],t:1,c:'genel'},
+{w:'SALATALIK',f:['YEŞİL','UZUN','SEBZE','SALATA','SU'],t:1,c:'genel'},
+{w:'PATATES',f:['KIZARTMA','SARI','SEBZE','YEMEK','TOPRAK'],t:1,c:'genel'},
+{w:'SOĞAN',f:['GÖZ','YAŞ','KESMEK','KATMAN','YEMEK'],t:0,c:'genel'},
+{w:'SARIMSAK',f:['KOKU','DİŞ','BEYAZ','BAHARAT','YEMEK'],t:1,c:'genel'},
+{w:'PEYNİR',f:['SÜT','BEYAZ','KAHVALTI','TUZLU','DİLİM'],t:0,c:'genel'},
+{w:'ZEYTİN',f:['SİYAH','YEŞİL','KAHVALTI','ÇEKİRDEK','YAĞ'],t:0,c:'genel'},
+{w:'YUMURTA',f:['TAVUK','SARI','BEYAZ','KAHVALTI','HAŞLAMAK'],t:1,c:'genel'},
+{w:'GAZOZ',f:['GAZLI','İÇECEK','ŞİŞE','SODA','TATLI'],t:0,c:'genel'},
+{w:'TAKVİM',f:['GÜN','AY','YIL','TARİH','DUVAR'],t:0,c:'genel'},
+{w:'DEFTER',f:['YAZMAK','SAYFA','ÇİZGİ','OKUL','NOT'],t:0,c:'genel'},
+{w:'SİLGİ',f:['KALEM','SİLMEK','HATA','BEYAZ','OKUL'],t:0,c:'genel'},
+{w:'CETVEL',f:['ÖLÇMEK','DÜZ','ÇİZGİ','OKUL','UZUN'],t:0,c:'genel'},
+{w:'BOYA',f:['RENK','RESİM','FIRÇA','ÇİZMEK','SANAT'],t:0,c:'genel'},
+{w:'TUVAL',f:['RESİM','BOYA','TABLO','SANAT','YÜZEY'],t:0,c:'genel'},
+{w:'MÜZE',f:['ESER','TARİH','SERGİ','ZİYARET','SANAT'],t:0,c:'genel'},
+{w:'SİNEMA',f:['FİLM','İZLEMEK','BİLET','SALON','EKRAN'],t:0,c:'genel'},
+{w:'KONSER',f:['MÜZİK','SAHNE','CANLI','KALABALIK','BİLET'],t:0,c:'genel'},
+{w:'KAFE',f:['KAHVE','MASA','OTURMAK','SOHBET','İÇMEK'],t:0,c:'genel'},
+{w:'RESTORAN',f:['YEMEK','MASA','MENÜ','SERVİS','GARSON'],t:1,c:'genel'},
+{w:'PASTANE',f:['TATLI','PASTA','KEK','ŞEKER','VİTRİN'],t:1,c:'genel'},
+{w:'PARA',f:['ALIŞVERİŞ','ÖDEME','DEĞER','KAĞIT','EKONOMİ'],t:0,c:'genel'},
+{w:'KART',f:['KREDİ','BANKA','ÖDEME','PLASTİK','PARA'],t:0,c:'genel'},
+{w:'FATURA',f:['ÖDEME','BORÇ','ELEKTRİK','SU','KAĞIT'],t:0,c:'genel'},
+{w:'BÜTÇE',f:['PARA','PLAN','GELİR','GİDER','HESAP'],t:0,c:'genel'},
+{w:'PLAN',f:['DÜZEN','GELECEK','PROGRAM','HEDEF','YAPMAK'],t:0,c:'genel'},
+{w:'HEDEF',f:['AMAÇ','ULAŞMAK','PLAN','BAŞARI','SONUÇ'],t:0,c:'genel'},
+{w:'KARAR',f:['SEÇİM','DÜŞÜNMEK','SONUÇ','VERMEK','SEÇENEK'],t:0,c:'genel'},
+{w:'FİKİR',f:['DÜŞÜNCE','ÖNERİ','AKIL','YARATMAK','GÖRÜŞ'],t:0,c:'genel'},
+{w:'YORUM',f:['DÜŞÜNCE','SÖYLEMEK','DEĞERLENDİRME','İFADE','FİKİR'],t:0,c:'genel'},
+{w:'ANLAŞMA',f:['UZLAŞMA','KABUL','KARAR','BİRLİKTE','SONUÇ'],t:1,c:'genel'},
+{w:'BELGE',f:['KAĞIT','RESMİ','YAZI','BİLGİ','KAYIT'],t:0,c:'genel'},
+{w:'İMZA',f:['AD','YAZMAK','ONAY','BELGE','RESMİ'],t:0,c:'genel'},
+{w:'YASA',f:['KURAL','DEVLET','ZORUNLU','HUKUK','SİSTEM'],t:0,c:'genel'},
+{w:'MAHKEME',f:['HAKİM','DAVA','KARAR','HUKUK','YER'],t:1,c:'genel'},
+{w:'AVUKAT',f:['SAVUNMA','DAVA','HUKUK','MAHKEME','KİŞİ'],t:0,c:'genel'},
+{w:'CEZA',f:['SUÇ','HUKUK','YAPTIRIM','SONUÇ','MAHKEME'],t:0,c:'genel'},
+{w:'DEVLET',f:['ÜLKE','YÖNETİM','YASA','KURUM','HALK'],t:0,c:'genel'},
+{w:'ÜLKE',f:['BAYRAK','SINIR','VATANDAŞ','HARİTA','DEVLET'],t:0,c:'genel'},
+{w:'ŞEHİR',f:['BİNA','KALABALIK','YAŞAM','MERKEZ','YER'],t:0,c:'genel'},
+{w:'MAHALLE',f:['SOKAK','EV','KOMŞU','ŞEHİR','YER'],t:1,c:'genel'},
+{w:'SOKAK',f:['YOL','YÜRÜMEK','CADDE','ŞEHİR','EV'],t:0,c:'genel'},
+{w:'CADDE',f:['GENİŞ','YOL','ARAÇ','TRAFİK','ŞEHİR'],t:0,c:'genel'},
+{w:'TRAFİK',f:['ARABA','YOL','YOĞUN','IŞIK','KURAL'],t:0,c:'genel'},
+{w:'İSTASYON',f:['TREN','METRO','DURAK','YOLCU','ULAŞIM'],t:1,c:'genel'},
+{w:'BİLET',f:['YOLCULUK','ÖDEME','GİRİŞ','KAĞIT','KONTROL'],t:0,c:'genel'},
+{w:'SINAV',f:['OKUL','TEST','ÖĞRENCİ','NOT','ÖLÇMEK'],t:0,c:'genel'},
+{w:'DİPLOMA',f:['MEZUN','BELGE','EĞİTİM','BAŞARI','OKUL'],t:1,c:'genel'},
+{w:'KUTLAMA',f:['EĞLENCE','PARTİ','MUTLULUK','ETKİNLİK','ÖZEL'],t:1,c:'genel'},
+{w:'DANS',f:['MÜZİK','HAREKET','RİTİM','EĞLENCE','BEDEN'],t:0,c:'genel'},
+{w:'ŞARKI',f:['MÜZİK','SÖZ','MELODİ','SÖYLEMEK','DİNLEMEK'],t:0,c:'genel'},
+{w:'DAVUL',f:['RİTİM','VURMAK','MÜZİK','SES','ENSTRÜMAN'],t:0,c:'genel'},
+{w:'FLÜT',f:['ÜFLEMEK','MÜZİK','NEFES','ENSTRÜMAN','SES'],t:0,c:'genel'},
+{w:'HİKAYE',f:['ANLATMAK','OLAY','KARAKTER','KİTAP','KURGU'],t:0,c:'genel'},
+{w:'ROMAN',f:['UZUN','KİTAP','YAZAR','KURGU','HİKAYE'],t:0,c:'genel'},
+{w:'SANAT',f:['ESER','YARATICILIK','RESİM','MÜZİK','İFADE'],t:0,c:'genel'},
+{w:'TARİH',f:['GEÇMİŞ','OLAY','ZAMAN','KAYIT','BİLGİ'],t:0,c:'genel'},
+{w:'COĞRAFYA',f:['HARİTA','DÜNYA','YER','DAĞ','ÜLKE'],t:1,c:'genel'},
+{w:'MATEMATİK',f:['SAYI','İŞLEM','PROBLEM','ÇÖZÜM','DERS'],t:1,c:'genel'},
+{w:'FİZİK',f:['ENERJİ','KUVVET','HAREKET','DENEY','BİLİM'],t:0,c:'genel'},
+{w:'KİMYA',f:['MADDE','REAKSİYON','DENEY','ELEMENT','LABORATUVAR'],t:0,c:'genel'},
+{w:'BİYOLOJİ',f:['CANLI','HÜCRE','DOĞA','BİLİM','YAŞAM'],t:1,c:'genel'},
+{w:'EKONOMİ',f:['PARA','PİYASA','TİCARET','ÜRETİM','TÜKETİM'],t:1,c:'genel'},
+{w:'SİYASET',f:['YÖNETİM','DEVLET','SEÇİM','PARTİ','KARAR'],t:1,c:'genel'},
+{w:'KAMERA',f:['FOTOĞRAF','LENS','ÇEKMEK','GÖRÜNTÜ','KAYIT'],t:0,c:'genel'},
+{w:'LENS',f:['KAMERA','ODAK','CAM','GÖRÜNTÜ','YAKINLAŞTIRMAK'],t:0,c:'genel'},
+{w:'TRİPOD',f:['KAMERA','SABİT','AYAK','ÇEKİM','DENGE'],t:0,c:'genel'},
+{w:'VİDEO',f:['GÖRÜNTÜ','KAYIT','İZLEMEK','HAREKET','EKRAN'],t:0,c:'genel'},
+{w:'MİKROFON',f:['SES','KAYIT','KONUŞMAK','CİHAZ','YAYIN'],t:1,c:'genel'},
+{w:'HOPARLÖR',f:['SES','MÜZİK','YÜKSEK','CİHAZ','DİNLEMEK'],t:1,c:'genel'},
+{w:'KULAKLIK',f:['SES','MÜZİK','KULAK','DİNLEMEK','CİHAZ'],t:1,c:'genel'},
+{w:'RADYO',f:['YAYIN','FREKANS','SES','MÜZİK','DİNLEMEK'],t:0,c:'genel'},
+{w:'FREKANS',f:['DALGA','RADYO','ÖLÇÜ','SİNYAL','SAYI'],t:1,c:'genel'},
+{w:'SİNYAL',f:['İLETİŞİM','DALGA','BAĞLANTI','CİHAZ','GÜÇ'],t:0,c:'genel'},
+{w:'BAĞLANTI',f:['İNTERNET','KABLO','AĞ','İLİŞKİ','İLETİŞİM'],t:1,c:'genel'},
+{w:'SUNUM',f:['SLAYT','ANLATMAK','KONUŞMA','TOPLANTI','BİLGİ'],t:0,c:'genel'},
+{w:'TOPLANTI',f:['GRUP','KONUŞMAK','KARAR','İŞ','MASA'],t:1,c:'genel'},
+{w:'OFİS',f:['İŞ','MASA','BİLGİSAYAR','ÇALIŞMA','ŞİRKET'],t:0,c:'genel'},
+{w:'ŞİRKET',f:['ÇALIŞAN','PARA','KURUM','YÖNETİM','İŞ'],t:0,c:'genel'},
+{w:'PATRON',f:['YÖNETMEK','ŞİRKET','KARAR','KİŞİ','İŞ'],t:0,c:'genel'},
+{w:'ÇALIŞAN',f:['MAAŞ','GÖREV','İŞ','ŞİRKET','KİŞİ'],t:1,c:'genel'},
+{w:'MAAŞ',f:['PARA','AYLIK','ÖDEME','GELİR','İŞ'],t:0,c:'genel'},
+{w:'GELİR',f:['PARA','KAZANMAK','İŞ','EKONOMİ','KAZANÇ'],t:0,c:'genel'},
+{w:'GİDER',f:['PARA','HARCAMAK','MASRAF','BÜTÇE','EKONOMİ'],t:0,c:'genel'},
+{w:'TASARRUF',f:['PARA','BİRİKTİRMEK','HARCAMA','AZ','EKONOMİ'],t:1,c:'genel'},
+{w:'YATIRIM',f:['PARA','KAZANÇ','RİSK','EKONOMİ','GELECEK'],t:1,c:'genel'},
+{w:'BORSA',f:['HİSSE','PİYASA','YATIRIM','PARA','EKONOMİ'],t:0,c:'genel'},
+{w:'HİSSE',f:['ŞİRKET','PAY','BORSA','YATIRIM','DEĞER'],t:0,c:'genel'},
+{w:'FAİZ',f:['BANKA','ORAN','KREDİ','PARA','EKONOMİ'],t:0,c:'genel'},
+{w:'KREDİ',f:['BANKA','BORÇ','ÖDEME','FAİZ','PARA'],t:0,c:'genel'},
+{w:'BORÇ',f:['GERİ','ÖDEME','PARA','YÜK','FİNANS'],t:0,c:'genel'},
+{w:'ÖDEME',f:['PARA','ALIŞVERİŞ','BORÇ','KASA','İŞLEM'],t:0,c:'genel'},
+{w:'ALIŞVERİŞ',f:['ÜRÜN','MAĞAZA','PARA','ALMAK','SATMAK'],t:1,c:'genel'},
+{w:'MAĞAZA',f:['VİTRİN','ÜRÜN','SATIŞ','ALIŞVERİŞ','YER'],t:0,c:'genel'},
+{w:'VİTRİN',f:['CAM','SERGİLEMEK','ÜRÜN','MAĞAZA','ÖN'],t:0,c:'genel'},
+{w:'İNDİRİM',f:['FİYAT','DÜŞÜK','KAMPANYA','SATIŞ','ALIŞVERİŞ'],t:1,c:'genel'},
+{w:'KAMPANYA',f:['REKLAM','FIRSAT','İNDİRİM','SATIŞ','SÜRE'],t:1,c:'genel'},
+{w:'FIRSAT',f:['AVANTAJ','ŞANS','İNDİRİM','ZAMAN','YAKALAMAK'],t:0,c:'genel'},
+{w:'RİSK',f:['TEHLİKE','İHTİMAL','KAYIP','KARAR','DURUM'],t:0,c:'genel'},
+{w:'TERCİH',f:['SEÇİM','İSTEMEK','BEĞENMEK','KARAR','KİŞİ'],t:0,c:'genel'},
+{w:'PROGRAM',f:['PLAN','ZAMAN','LİSTE','İŞ','DÜZEN'],t:1,c:'genel'},
+{w:'LİSTE',f:['SIRALAMAK','YAZMAK','MADDE','PLAN','DÜZEN'],t:0,c:'genel'},
+{w:'AMAÇ',f:['HEDEF','NEDEN','İSTEK','SONUÇ','PLAN'],t:0,c:'genel'},
+{w:'SONUÇ',f:['BİTİŞ','ETKİ','KARAR','DEĞERLENDİRME','DURUM'],t:0,c:'genel'},
+{w:'DEĞERLENDİRME',f:['ANALİZ','YORUM','SONUÇ','İNCELEME','KARAR'],t:1,c:'genel'},
+{w:'GÖRÜŞ',f:['FİKİR','BAKIŞ','DÜŞÜNCE','YORUM','İFADE'],t:0,c:'genel'},
+{w:'TARTIŞMA',f:['KONUŞMA','ANLAŞMAZLIK','FİKİR','SAVUNMAK','KONU'],t:1,c:'genel'},
+{w:'SÖZLEŞME',f:['ANLAŞMA','İMZA','ŞART','BELGE','RESMİ'],t:1,c:'genel'},
+{w:'ONAY',f:['KABUL','İZİN','EVET','KARAR','İŞLEM'],t:0,c:'genel'},
+{w:'İZİN',f:['ONAY','YAPMAK','HAK','SERBEST','ALMAK'],t:0,c:'genel'},
+{w:'ADALET',f:['EŞİTLİK','HUKUK','DOĞRU','MAHKEME','SİSTEM'],t:0,c:'genel'},
+{w:'HAKİM',f:['MAHKEME','KARAR','HUKUK','YARGI','KİŞİ'],t:0,c:'genel'},
+{w:'DAVA',f:['MAHKEME','HUKUK','SUÇ','SÜREÇ','KARAR'],t:0,c:'genel'},
+{w:'YÖNETİM',f:['KONTROL','KARAR','SİSTEM','LİDER','ORGANİZASYON'],t:1,c:'genel'},
+{w:'ORGANİZASYON',f:['DÜZEN','PLAN','ETKİNLİK','YAPI','YÖNETİM'],t:1,c:'genel'},
+{w:'İNŞAAT',f:['BİNA','BETON','YAPI','YAPMAK','İŞ'],t:0,c:'genel'},
+{w:'TUĞLA',f:['DUVAR','KIRMIZI','BLOK','YAPI','İNŞAAT'],t:0,c:'genel'},
+{w:'ÇİMENTO',f:['BAĞLAMAK','TOZ','YAPI','BETON','İNŞAAT'],t:1,c:'genel'},
+{w:'TEMİZLİK',f:['HİJYEN','SİLMEK','DÜZEN','BAKIM','EV'],t:1,c:'genel'},
+{w:'DÜZEN',f:['TERTİP','PLAN','SIRALI','SİSTEM','TEMİZ'],t:0,c:'genel'},
+{w:'DAĞINIK',f:['KARIŞIK','DÜZENSİZ','EŞYA','KARMAŞA','YER'],t:1,c:'genel'},
+{w:'KARMAŞA',f:['DÜZENSİZ','ZOR','KARIŞIK','DURUM','YOĞUN'],t:1,c:'genel'},
+{w:'ASTRONOMİ',f:['UZAY','YILDIZ','TELESKOP','GALAKSİ','BİLİM'],t:1,c:'genel'},
+{w:'DEPREM',f:['SARSINTI','YER','FAY','AFET','RİCHTER'],t:0,c:'genel'},
+{w:'OKSİJEN',f:['GAZ','HAVA','NEFES','SOLUNUM','ELEMENT'],t:1,c:'genel'},
+{w:'ANTİBİYOTİK',f:['İLAÇ','BAKTERİ','TEDAVİ','HASTALIK','ENFEKSİYON'],t:1,c:'genel'},
+{w:'İNOVASYON',f:['YENİLİK','FİKİR','TEKNOLOJİ','GELİŞİM','ÜRETİM'],t:1,c:'genel'},
+{w:'SANAL GERÇEKLİK',f:['GÖZLÜK','DİJİTAL','OYUN','TEKNOLOJİ','DENEYİM'],t:1,c:'genel'},
+{w:'ARTIRILMIŞ GERÇEKLİK',f:['EKRAN','KATMAN','GÖRÜNTÜ','TEKNOLOJİ','GERÇEK'],t:1,c:'genel'},
+{w:'NARSİSİZM',f:['EGO','BENLİK','KİŞİ','PSİKOLOJİ','HAYRANLIK'],t:1,c:'genel'},
+{w:'DEJA VU',f:['HİS','TEKRAR','ANI','ZAMAN','TANIDIK'],t:0,c:'genel'},
+{w:'MELANKOLİ',f:['HÜZÜN','DUYGU','ÜZGÜN','RUH HALİ','DÜŞÜNCE'],t:1,c:'genel'},
+{w:'KATARSİS',f:['ARINMA','DUYGU','RAHATLAMA','PSİKOLOJİ','SANAT'],t:1,c:'genel'},
+{w:'HOLOGRAM',f:['IŞIK','GÖRÜNTÜ','3D','YANSIMA','TEKNOLOJİ'],t:1,c:'genel'},
+{w:'LOJİSTİK',f:['TAŞIMA','PLANLAMA','DAĞITIM','SİSTEM','ÜRÜN'],t:1,c:'genel'},
+{w:'PROTOTİP',f:['MODEL','ÖRNEK','TASARIM','İLK','ÜRÜN'],t:1,c:'genel'},
+{w:'MİNİMALİZM',f:['SADE','AZ','YAŞAM','EŞYA','BASİT'],t:1,c:'genel'},
+{w:'MAKSİMALİZM',f:['ÇOK','YOĞUN','DETAY','DOLU','STİL'],t:1,c:'genel'},
+{w:'REGRESYON',f:['ANALİZ','VERİ','DÜŞÜŞ','İSTATİSTİK','MODEL'],t:1,c:'genel'},
+{w:'KRİZ',f:['SORUN','ACİL','TEHLİKE','DURUM','EKONOMİ'],t:0,c:'genel'},
+{w:'TAKTİK',f:['KISA','PLAN','HAMLE','STRATEJİ','HAREKET'],t:0,c:'genel'},
+{w:'DİSİPLİN',f:['DÜZEN','KONTROL','KURAL','ALIŞKANLIK','ÇALIŞMA'],t:1,c:'genel'},
+{w:'ODAKLANMA',f:['DİKKAT','KONSANTRASYON','HEDEF','ZİHİN','İŞ'],t:1,c:'genel'},
+{w:'ALGI',f:['GÖRMEK','ANLAMAK','ZİHİN','YORUM','DUYGU'],t:0,c:'genel'},
+{w:'REFLEKS',f:['TEPKİ','HIZLI','HAREKET','SİNİR','KONTROL'],t:1,c:'genel'},
+{w:'ADAPTASYON',f:['UYUM','DEĞİŞİM','ÇEVRE','SÜREÇ','CANLI'],t:1,c:'genel'},
+{w:'İKNA',f:['İNANDIRMAK','KONUŞMA','ETKİLEMEK','KARAR','KİŞİ'],t:0,c:'genel'},
+{w:'PERSPEKTİF',f:['BAKIŞ','AÇI','DÜŞÜNCE','YORUM','GÖRÜŞ'],t:1,c:'genel'},
+{w:'ALARM',f:['SAAT','UYANMAK','SES','SABAH','ZAMAN'],t:0,c:'genel'},
+{w:'KOL SAATİ',f:['BİLEK','ZAMAN','AKSESUAR','DAKİKA','SANİYE'],t:1,c:'genel'},
+{w:'DİŞ FIRÇASI',f:['DİŞ','TEMİZLİK','MACUN','SABAH','AĞIZ'],t:1,c:'genel'},
+{w:'DİŞ MACUNU',f:['TÜP','NANE','TEMİZLİK','DİŞ','FIRÇA'],t:1,c:'genel'},
+{w:'KÜVET',f:['BANYO','SU','YATMAK','KÖPÜK','YIKANMAK'],t:0,c:'genel'},
+{w:'LAVABO',f:['SU','EL','YIKAMAK','BANYO','MUSLUK'],t:0,c:'genel'},
+{w:'MUSLUK',f:['SU','AÇMAK','KAPATMAK','LAVABO','AKMAK'],t:0,c:'genel'},
+{w:'ASPİRATÖR',f:['MUTFAK','KOKU','ÇEKMEK','HAVA','OCAK'],t:1,c:'genel'},
+{w:'OCAK',f:['YEMEK','ATEŞ','PİŞİRMEK','MUTFAK','GAZ'],t:0,c:'genel'},
+{w:'ÇÖP KUTUSU',f:['KAP','ATMAK','ÇÖP','PLASTİK','EV'],t:1,c:'genel'},
+{w:'SÜPÜRGE',f:['TEMİZLİK','TOZ','ÇEKMEK','YER','ELEKTRİK'],t:1,c:'genel'},
+{w:'PASPAS',f:['TEMİZLİK','SU','YER','SİLMEK','BEZ'],t:0,c:'genel'},
+{w:'ÇAMAŞIR MAKİNESİ',f:['YIKAMAK','DETERJAN','DÖNDÜRMEK','SU','GİYSİ'],t:1,c:'genel'},
+{w:'BULAŞIK MAKİNESİ',f:['YIKAMAK','TABAK','DETERJAN','SU','MUTFAK'],t:1,c:'genel'},
+{w:'DETERJAN',f:['TEMİZLİK','KÖPÜK','ÇAMAŞIR','KOKU','SABUN'],t:1,c:'genel'},
+{w:'KURUTMA MAKİNESİ',f:['GİYSİ','KURUTMAK','SICAK','MAKİNE','ÇAMAŞIR'],t:1,c:'genel'},
+{w:'DOLAP KAPAĞI',f:['AÇMAK','KAPATMAK','DOLAP','MENTEŞE','KAPI'],t:1,c:'genel'},
+{w:'ASKI',f:['GİYSİ','DOLAP','ASMAK','KIYAFET','ÇUBUK'],t:0,c:'genel'},
+{w:'VALİZ',f:['SEYAHAT','TAŞIMAK','KIYAFET','BAVUL','YOLCULUK'],t:0,c:'genel'},
+{w:'PASAPORT',f:['KİMLİK','ÜLKE','SINIR','SEYAHAT','BELGE'],t:1,c:'genel'},
+{w:'BAVUL',f:['SEYAHAT','TAŞIMAK','VALİZ','EŞYA','YOLCULUK'],t:0,c:'genel'},
+{w:'HARÇLIK',f:['PARA','KÜÇÜK','ÇOCUK','VERMEK','GÜNLÜK'],t:1,c:'genel'},
+{w:'BOZUK PARA',f:['METAL','KÜÇÜK','ALIŞVERİŞ','PARA','CÜZDAN'],t:1,c:'genel'},
+{w:'BANKAMATİK',f:['PARA','ÇEKMEK','KART','BANKA','MAKİNE'],t:1,c:'genel'},
+{w:'ŞİFRE',f:['GİZLİ','GİRİŞ','GÜVENLİK','PAROLA','KORUMA'],t:0,c:'genel'},
+{w:'KİLİT',f:['KAPI','ANAHTAR','GÜVENLİK','METAL','KAPATMAK'],t:0,c:'genel'},
+{w:'KAPI KOLU',f:['AÇMAK','KAPI','TUTMAK','METAL','ÇEVİRMEK'],t:1,c:'genel'},
+{w:'MERDİVEN',f:['ÇIKMAK','İNMEK','BASAMAK','KAT','EV'],t:1,c:'genel'},
+{w:'ASANSÖR',f:['KAT','YUKARI','AŞAĞI','DÜĞME','BİNA'],t:1,c:'genel'},
+{w:'DÜĞME',f:['BASMAK','AÇMAK','KAPATMAK','CİHAZ','KONTROL'],t:0,c:'genel'},
+{w:'UZAKTAN KUMANDA',f:['TELEVİZYON','DÜĞME','KONTROL','PİL','CİHAZ'],t:1,c:'genel'},
+{w:'ŞARJ ALETİ',f:['ELEKTRİK','TELEFON','KABLO','ENERJİ','DOLDURMAK'],t:1,c:'genel'},
+{w:'KABLO',f:['BAĞLANTI','ELEKTRİK','TEL','CİHAZ','GÜÇ'],t:0,c:'genel'},
+{w:'PRİZ',f:['DUVAR','ELEKTRİK','FİŞ','ENERJİ','BAĞLANTI'],t:0,c:'genel'},
+{w:'AMPUL',f:['IŞIK','ELEKTRİK','CAM','PARLAK','LAMBA'],t:0,c:'genel'},
+{w:'GECE LAMBASI',f:['IŞIK','UYKU','LOŞ','ODA','GECE'],t:1,c:'genel'},
+{w:'MASA LAMBASI',f:['IŞIK','MASA','DERS','GECE','AYDINLATMA'],t:1,c:'genel'},
+{w:'DEFTER KAPAĞI',f:['KAPATMAK','AÇMAK','DEFTER','KARTON','YÜZEY'],t:1,c:'genel'},
+{w:'KİTAP AYRACI',f:['SAYFA','YER','OKUMAK','İŞARET','KİTAP'],t:1,c:'genel'},
+{w:'POST-İT',f:['NOT','YAPIŞKAN','KÜÇÜK','YAZMAK','KAĞIT'],t:0,c:'genel'},
+{w:'ATAŞ',f:['KAĞIT','TUTMAK','METAL','KÜÇÜK','OFİS'],t:0,c:'genel'},
+{w:'DOSYA KLASÖRÜ',f:['BELGE','SAKLAMAK','KAĞIT','DÜZEN','OFİS'],t:1,c:'genel'},
+{w:'KALEM KUTUSU',f:['KALEM','SAKLAMAK','ÇANTA','OKUL','KAP'],t:1,c:'genel'},
+{w:'SİLGİ TOZU',f:['KALEM','SİLMEK','KÜÇÜK','BEYAZ','MASA'],t:1,c:'genel'},
+{w:'TAHTA KALEMİ',f:['YAZMAK','BEYAZ TAHTA','SİLMEK','OKUL','RENK'],t:1,c:'genel'},
+{w:'TEBEŞİR',f:['YAZMAK','TAHTA','BEYAZ','OKUL','TOZ'],t:1,c:'genel'},
+{w:'TAHTA SİLGİSİ',f:['SİLMEK','TAHTA','DERS','OKUL','BEZ'],t:1,c:'genel'},
+{w:'PROJEKSİYON',f:['EKRAN','SUNUM','GÖRÜNTÜ','CİHAZ','IŞIK'],t:1,c:'genel'},
+{w:'PERDE ÇUBUĞU',f:['PERDE','ASMAK','PENCERE','METAL','EV'],t:1,c:'genel'},
+{w:'PERDE HALKASI',f:['PERDE','YUVARLAK','TAKMAK','ÇUBUK','ASMAK'],t:1,c:'genel'},
+{w:'GÜNEŞLİK',f:['PENCERE','IŞIK','GÖLGE','PERDE','YAZ'],t:1,c:'genel'},
+{w:'STOR PERDE',f:['PENCERE','AÇMAK','KAPATMAK','KUMAŞ','EV'],t:1,c:'genel'},
+{w:'SİNEKLİK',f:['PENCERE','BÖCEK','KORUMAK','TEL','YAZ'],t:1,c:'genel'},
+{w:'KAPI ZİLİ',f:['KAPI','BASMAK','SES','ZİYARETÇİ','UYARI'],t:1,c:'genel'},
+{w:'GÖRÜNTÜLÜ ZİL',f:['KAPI','KAMERA','EKRAN','KONUŞMAK','ZİYARETÇİ'],t:1,c:'genel'},
+{w:'ANAHTARLIK',f:['ANAHTAR','TAŞIMAK','KÜÇÜK','AKSESUAR','METAL'],t:1,c:'genel'},
+{w:'ÇEKMECE',f:['DOLAP','AÇMAK','KAPATMAK','SAKLAMAK','EŞYA'],t:1,c:'genel'},
+{w:'ÇEKMECE KULPU',f:['ÇEKMEK','TUTMAK','DOLAP','AÇMAK','METAL'],t:1,c:'genel'},
+{w:'MENTEŞE',f:['KAPI','DOLAP','DÖNMEK','METAL','BAĞLANTI'],t:1,c:'genel'},
+{w:'VİDA',f:['METAL','SIKMAK','ALET','BAĞLAMAK','KÜÇÜK'],t:0,c:'genel'},
+{w:'ÇİVİ',f:['DUVAR','ÇAKMAK','METAL','ASMAK','ALET'],t:0,c:'genel'},
+{w:'ÇEKİÇ',f:['VURMAK','ÇİVİ','ALET','METAL','İŞ'],t:0,c:'genel'},
+{w:'TORNAVİDA',f:['VİDA','SIKMAK','AÇMAK','ALET','METAL'],t:1,c:'genel'},
+{w:'MATKAP',f:['DELMEK','DUVAR','ELEKTRİK','ALET','DELİK'],t:0,c:'genel'},
+{w:'MARANGOZ',f:['AHŞAP','KESMEK','YAPMAK','MOBİLYA','USTA'],t:1,c:'genel'},
+{w:'BOYACI',f:['BOYA','DUVAR','RENK','FIRÇA','İŞ'],t:0,c:'genel'},
+{w:'FIRÇA',f:['BOYA','SAÇ','TEMİZLİK','KIL','SÜRMEK'],t:0,c:'genel'},
+{w:'RULO',f:['BOYA','DUVAR','SÜRMEK','SİLİNDİR','FIRÇA'],t:0,c:'genel'},
+{w:'BOYA KOVASI',f:['BOYA','KAP','RENK','SIVI','DUVAR'],t:1,c:'genel'},
+{w:'MERDİVEN BASAMAĞI',f:['AYAK','ÇIKMAK','KAT','BASMAK','YÜKSEKLİK'],t:1,c:'genel'},
+{w:'KAPI EŞİĞİ',f:['GİRİŞ','KAPI','ALT','GEÇMEK','EV'],t:1,c:'genel'},
+{w:'PASPAS KAPI',f:['SİLMEK','AYAK','GİRİŞ','KİR','EV'],t:1,c:'genel'},
+{w:'AYAKKABILIK',f:['AYAKKABI','DOLAP','SAKLAMAK','GİRİŞ','EV'],t:1,c:'genel'},
+{w:'VESTİYER',f:['MONT','ASKI','GİRİŞ','DOLAP','EV'],t:1,c:'genel'},
+{w:'AYNA ÇERÇEVESİ',f:['AYNA','KENAR','DEKOR','DUVAR','ÇERÇEVE'],t:1,c:'genel'},
+{w:'DUVAR SAATİ',f:['ZAMAN','DUVAR','SAAT','TİK TAK','PİL'],t:1,c:'genel'},
+{w:'TAKVİM YAPRAĞI',f:['GÜN','TARİH','AY','YIL','KOPARMAK'],t:1,c:'genel'},
+{w:'KALEM UCU',f:['KALEM','YAZMAK','İNCE','UÇ','ÇİZMEK'],t:1,c:'genel'},
+{w:'KALEMTIRAŞ',f:['KALEM','AÇMAK','UÇ','KÜÇÜK','OKUL'],t:1,c:'genel'},
+{w:'SİLGİ KAPAĞI',f:['KALEM','SİLMEK','KÜÇÜK','ÜST','BEYAZ'],t:1,c:'genel'},
+{w:'ÇANTA FERMUARI',f:['AÇMAK','KAPATMAK','DİŞ','ÇANTA','SÜRMEK'],t:1,c:'genel'},
+{w:'DÜĞME GİYSİ',f:['BASMAK','KAPATMAK','AÇMAK','GİYSİ','KÜÇÜK'],t:1,c:'genel'},
+{w:'KEMER',f:['PANTOLON','BEL','BAĞLAMAK','TOKA','GİYSİ'],t:0,c:'genel'},
+{w:'LASTİK TOKA',f:['SAÇ','BAĞLAMAK','ESNEK','KÜÇÜK','AKSESUAR'],t:1,c:'genel'},
+{w:'ELDİVEN',f:['EL','KIŞ','SICAK','GİYMEK','ÇİFT'],t:1,c:'genel'},
+{w:'ATKI',f:['BOYUN','KIŞ','SICAK','SARILMAK','GİYSİ'],t:0,c:'genel'},
+{w:'YAĞMURLUK',f:['YAĞMUR','SU','GİYSİ','KORUMAK','DIŞ'],t:1,c:'genel'},
+{w:'ŞEMSİYE ÇUBUĞU',f:['TUTMAK','AÇMAK','METAL','YAĞMUR','SAP'],t:1,c:'genel'},
+{w:'ŞEMSİYE KUMAŞI',f:['SU','KAPLAMAK','AÇMAK','YAĞMUR','GÖLGE'],t:1,c:'genel'},
+{w:'PLASTİK ŞİŞE',f:['SU','İÇMEK','HAFİF','KAP','TAŞIMAK'],t:1,c:'genel'},
+{w:'CAM ŞİŞE',f:['İÇECEK','CAM','KAP','SIVI','KIRILMAK'],t:1,c:'genel'},
+{w:'TERMOS KAPAK',f:['KAPATMAK','SICAK','İÇECEK','TERMOS','AÇMAK'],t:1,c:'genel'},
+{w:'TERMOS İÇECEK',f:['SICAK','KORUMAK','KAP','ÇAY','KAHVE'],t:1,c:'genel'},
+{w:'SU MATARASI',f:['SU','TAŞIMAK','KAP','SPOR','İÇMEK'],t:1,c:'genel'},
+{w:'BESLENME ÇANTASI',f:['YEMEK','OKUL','TAŞIMAK','ÇOCUK','KAP'],t:1,c:'genel'},
+{w:'SANDVİÇ',f:['EKMEK','İÇ','YEMEK','HIZLI','ATIŞTIRMALIK'],t:1,c:'genel'},
+{w:'ATIŞTIRMALIK',f:['KÜÇÜK','YEMEK','ARA','HIZLI','HAFİF'],t:1,c:'genel'},
+{w:'KRAKER',f:['ÇITIR','TUZLU','ATIŞTIRMALIK','PAKET','YEMEK'],t:0,c:'genel'},
+{w:'BİSKÜVİ',f:['TATLI','PAKET','ÇAY','ATIŞTIRMALIK','GEVREK'],t:1,c:'genel'},
+{w:'ÇAKMAK',f:['ATEŞ','YAKMAK','KÜÇÜK','GAZ','ALEV'],t:0,c:'genel'},
+{w:'KİBRİT',f:['ATEŞ','YAKMAK','ÇUBUK','SÜRTMEK','ALEV'],t:0,c:'genel'},
+{w:'OCAK DÜĞMESİ',f:['GAZ','AÇMAK','KAPATMAK','ATEŞ','KONTROL'],t:1,c:'genel'},
+{w:'TENCERE KAPAĞI',f:['KAPATMAK','BUHAR','YEMEK','MUTFAK','KAP'],t:1,c:'genel'},
+{w:'BUHAR',f:['SICAK','SU','YÜKSELMEK','PİŞİRMEK','GAZ'],t:0,c:'genel'},
+{w:'SU ISITICISI',f:['KAYNATMAK','ELEKTRİK','SU','ÇAY','SICAK'],t:1,c:'genel'},
+{w:'ÇAYDANLIK',f:['ÇAY','KAYNATMAK','SU','DEMLEMEK','MUTFAK'],t:1,c:'genel'},
+{w:'DEMLİK',f:['ÇAY','DEMLEMEK','YAPRAK','SICAK','KAP'],t:0,c:'genel'},
+{w:'ÇAY BARDAĞI',f:['İNCE','CAM','ÇAY','KULPSUZ','KÜÇÜK'],t:1,c:'genel'},
+{w:'KAHVE FİNCANI',f:['KÜÇÜK','KAHVE','KULP','SICAK','PORSELEN'],t:1,c:'genel'},
+{w:'KANEPE',f:['KOLTUK','SALON','OTURMAK','RAHAT','BÜYÜK'],t:0,c:'genel'},
+{w:'BATTANİYE KILIFI',f:['ÖRTÜ','YATAK','KUMAŞ','KAPLAMAK','UYKU'],t:1,c:'genel'},
+{w:'YASTIK KILIFI',f:['YASTIK','KAPLAMAK','KUMAŞ','UYKU','YUMUŞAK'],t:1,c:'genel'},
+{w:'ÇARŞAF',f:['YATAK','ÖRTMEK','KUMAŞ','UYKU','BEYAZ'],t:0,c:'genel'},
+{w:'NEVRESİM',f:['YATAK','ÖRTÜ','TAKIM','UYKU','KUMAŞ'],t:1,c:'genel'},
+{w:'YORGAN',f:['KALIN','KIŞ','SICAK','UYKU','ÖRTÜ'],t:0,c:'genel'},
+{w:'YORGAN KILIFI',f:['KAPLAMAK','YORGAN','KUMAŞ','YATAK','ÖRTÜ'],t:1,c:'genel'},
+{w:'TEPSİ',f:['TAŞIMAK','SERVİS','MUTFAK','YEMEK','TABAK'],t:0,c:'genel'},
+{w:'SÜZGEÇ',f:['SU','DELİK','MAKARNA','YIKAMAK','MUTFAK'],t:0,c:'genel'},
+{w:'RENDE',f:['SÜRTMEK','PEYNİR','SEBZE','MUTFAK','DİŞLİ'],t:0,c:'genel'},
+{w:'KESME TAHTASI',f:['KESMEK','BIÇAK','MUTFAK','AHŞAP','YEMEK'],t:1,c:'genel'},
+{w:'BULAŞIK SÜNGERİ',f:['TEMİZLİK','KÖPÜK','TABAK','MUTFAK','YIKAMAK'],t:1,c:'genel'},
+{w:'MUTFAK HAVLUSU',f:['KURULAMAK','BEZ','MUTFAK','SU','TEMİZLİK'],t:1,c:'genel'},
+{w:'ŞİŞE AÇACAĞI',f:['KAPAK','AÇMAK','METAL','İÇECEK','ALET'],t:1,c:'genel'},
+{w:'KAVANOZ',f:['CAM','KAPAK','SAKLAMAK','YİYECEK','MUTFAK'],t:1,c:'genel'},
+{w:'KAVANOZ KAPAĞI',f:['KAPATMAK','AÇMAK','METAL','CAM','SIKMAK'],t:1,c:'genel'},
+{w:'SAKLAMA KABI',f:['KAP','YİYECEK','PLASTİK','KAPAK','MUTFAK'],t:1,c:'genel'},
+{w:'ALÜMİNYUM FOLYO',f:['SARMAK','METAL','MUTFAK','PİŞİRMEK','KAPLAMAK'],t:1,c:'genel'},
+{w:'STREÇ FİLM',f:['SARMAK','PLASTİK','KAP','YİYECEK','SAKLAMAK'],t:1,c:'genel'},
+{w:'BUZ KALIBI',f:['SU','DONDURMAK','BUZ','KALIP','DONDURUCU'],t:1,c:'genel'},
+{w:'DONDURUCU',f:['SOĞUK','BUZ','SAKLAMAK','YİYECEK','DOLAP'],t:1,c:'genel'},
+{w:'BUZDOLABI RAFI',f:['SOĞUK','YİYECEK','DOLAP','RAF','SAKLAMAK'],t:1,c:'genel'},
+{w:'SEBZELİK',f:['BUZDOLABI','SEBZE','ÇEKMECE','SAKLAMAK','TAZE'],t:1,c:'genel'},
+{w:'YUMURTA KUTUSU',f:['YUMURTA','KARTON','SAKLAMAK','KIRILMAK','KAP'],t:1,c:'genel'},
+{w:'EKMEK KUTUSU',f:['EKMEK','SAKLAMAK','KAP','MUTFAK','TAZE'],t:1,c:'genel'},
+{w:'BAHARATLIK',f:['BAHARAT','TUZ','BİBER','KAP','MUTFAK'],t:1,c:'genel'},
+{w:'TUZLUK',f:['TUZ','SERPMEK','KÜÇÜK','MASA','MUTFAK'],t:0,c:'genel'},
+{w:'BİBERLİK',f:['BİBER','SERPMEK','KÜÇÜK','MASA','MUTFAK'],t:1,c:'genel'},
+{w:'PEÇETE',f:['KAĞIT','SİLMEK','MASA','YEMEK','TEMİZLİK'],t:0,c:'genel'},
+{w:'PEÇETELİK',f:['PEÇETE','TUTMAK','MASA','KAP','DÜZEN'],t:1,c:'genel'},
+{w:'MASA ÖRTÜSÜ',f:['MASA','KUMAŞ','ÖRTMEK','YEMEK','DEKOR'],t:1,c:'genel'},
+{w:'SU SÜRAHİSİ',f:['SU','DÖKMEK','KAP','CAM','İÇECEK'],t:1,c:'genel'},
+{w:'ÇAY KAŞIĞI',f:['KÜÇÜK','ÇAY','KARIŞTIRMAK','METAL','MUTFAK'],t:1,c:'genel'},
+{w:'SERVİS KAŞIĞI',f:['BÜYÜK','YEMEK','SERVİS','MUTFAK','KAP'],t:1,c:'genel'},
+{w:'KEPÇE',f:['ÇORBA','DÖKMEK','MUTFAK','KAP','SIVI'],t:0,c:'genel'},
+{w:'ÇIRPICI',f:['KARIŞTIRMAK','YUMURTA','MUTFAK','TEL','ÇIRPMAK'],t:1,c:'genel'},
+{w:'MİKSER',f:['KARIŞTIRMAK','ELEKTRİK','MUTFAK','HIZLI','HAMUR'],t:0,c:'genel'},
+{w:'KAHVE MAKİNESİ',f:['KAHVE','YAPMAK','SICAK','CİHAZ','İÇECEK'],t:1,c:'genel'},
+{w:'SU ARITMA',f:['TEMİZ','FİLTRE','SU','CİHAZ','İÇMEK'],t:1,c:'genel'},
+{w:'FİLTRE',f:['SÜZMEK','TEMİZ','SU','CİHAZ','KATMAN'],t:0,c:'genel'},
+{w:'KETTLE',f:['SU','KAYNATMAK','ELEKTRİK','SICAK','ÇAY'],t:0,c:'genel'},
+{w:'TERMOMETRE',f:['ÖLÇMEK','SICAKLIK','DERECE','CİHAZ','ISI'],t:1,c:'genel'},
+{w:'BAROMETRE',f:['BASINÇ','HAVA','ÖLÇMEK','CİHAZ','ATMOSFER'],t:1,c:'genel'},
+{w:'HİGROMETRE',f:['NEM','ÖLÇMEK','HAVA','CİHAZ','ORAN'],t:1,c:'genel'},
+{w:'METRE',f:['ÖLÇMEK','UZUNLUK','SAYI','CİHAZ','MESAFE'],t:0,c:'genel'},
+{w:'ŞERİT METRE',f:['ÖLÇMEK','UZUN','ÇEKMEK','ALET','MESAFE'],t:1,c:'genel'},
+{w:'TERAZİ',f:['TARTMAK','AĞIRLIK','ÖLÇMEK','CİHAZ','KİLO'],t:0,c:'genel'},
+{w:'SAAT PİLİ',f:['KÜÇÜK','ENERJİ','SAAT','PİL','GÜÇ'],t:1,c:'genel'},
+{w:'UZATMA KABLOSU',f:['ELEKTRİK','PRİZ','KABLO','UZUN','BAĞLANTI'],t:1,c:'genel'},
+{w:'ÇOKLU PRİZ',f:['ELEKTRİK','FİŞ','ÇOK','PRİZ','BAĞLANTI'],t:1,c:'genel'},
+{w:'SİGORTA KUTUSU',f:['ELEKTRİK','KORUMA','EV','DEVRE','GÜVENLİK'],t:1,c:'genel'},
+{w:'DEVRE KESİCİ',f:['ELEKTRİK','GÜVENLİK','KAPATMAK','AKIM','KORUMA'],t:1,c:'genel'},
+{w:'JENERATÖR',f:['ELEKTRİK','ÜRETMEK','GÜÇ','CİHAZ','ENERJİ'],t:1,c:'genel'},
+{w:'PANEL',f:['GÜNEŞ','ENERJİ','ELEKTRİK','YÜZEY','ÜRETMEK'],t:0,c:'genel'},
+{w:'GÜNEŞ PANELİ',f:['GÜNEŞ','ENERJİ','ELEKTRİK','ÜRETMEK','PANEL'],t:1,c:'genel'},
+{w:'MOTOR YAĞI',f:['ARAÇ','YAĞLAMAK','MOTOR','BAKIM','SIVI'],t:1,c:'genel'},
+{w:'LASTİK POMPASI',f:['HAVA','ŞİŞİRMEK','TEKERLEK','BASINÇ','ALET'],t:1,c:'genel'},
+{w:'KRİKO',f:['KALDIRMAK','ARABA','TAMİR','TEKERLEK','ALET'],t:0,c:'genel'},
+{w:'BİJON ANAHTARI',f:['TEKERLEK','VİDA','AÇMAK','SIKMAK','ALET'],t:1,c:'genel'},
+{w:'SİLECEK',f:['CAM','YAĞMUR','TEMİZLEMEK','ARABA','SU'],t:1,c:'genel'},
+{w:'CAM SUYU',f:['ARABA','CAM','TEMİZLEMEK','SIVI','SİLECEK'],t:1,c:'genel'},
+{w:'TORPİDO',f:['ARABA','SAKLAMAK','ÖN','GÖZ','KAP'],t:1,c:'genel'},
+{w:'VİTES KOLU',f:['ARABA','DEĞİŞTİRMEK','HIZ','DİŞLİ','SÜRMEK'],t:1,c:'genel'},
+{w:'DEBRİYAJ',f:['ARABA','PEDAL','VİTES','BASMAK','KONTROL'],t:1,c:'genel'},
+{w:'FREN',f:['DURMAK','ARABA','PEDAL','YAVAŞLAMAK','GÜVENLİK'],t:0,c:'genel'},
+{w:'GAZ PEDALI',f:['HIZLANMAK','ARABA','BASMAK','PEDAL','MOTOR'],t:1,c:'genel'},
+{w:'DİREKSİYON',f:['ARABA','YÖN','ÇEVİRMEK','SÜRMEK','KONTROL'],t:1,c:'genel'},
+{w:'AYNA İÇ',f:['ARABA','ARKA','GÖRMEK','CAM','SÜRÜCÜ'],t:0,c:'genel'},
+{w:'AYNA YAN',f:['ARABA','YAN','GÖRMEK','CAM','TRAFİK'],t:1,c:'genel'},
+{w:'EMNİYET KEMERİ',f:['GÜVENLİK','ARABA','BAĞLAMAK','KAZA','KOLTUK'],t:1,c:'genel'},
+{w:'ÇOCUK KOLTUĞU',f:['ARABA','GÜVENLİK','ÇOCUK','KOLTUK','BAĞLAMAK'],t:1,c:'genel'},
+{w:'BAGAJ',f:['ARABA','EŞYA','ARKA','TAŞIMAK','KAPAK'],t:0,c:'genel'},
+{w:'YAKIT KAPAĞI',f:['ARABA','BENZİN','AÇMAK','KAPATMAK','DEPO'],t:1,c:'genel'},
+{w:'DEPO',f:['YAKIT','SAKLAMAK','ARABA','BENZİN','KAP'],t:0,c:'genel'},
+{w:'POMPA',f:['YAKIT','BASMAK','İSTASYON','BENZİN','DOLUM'],t:0,c:'genel'},
+{w:'AKARYAKIT İSTASYONU',f:['BENZİN','POMPA','ARABA','YAKIT','ÖDEME'],t:1,c:'genel'},
+{w:'TRAFİK IŞIĞI',f:['KIRMIZI','YEŞİL','SARI','DUR','GEÇ'],t:1,c:'genel'},
+{w:'YAYA GEÇİDİ',f:['ÇİZGİ','YOL','YÜRÜMEK','GÜVENLİK','KARŞI'],t:1,c:'genel'},
+{w:'KASİS',f:['YOL','YAVAŞ','ARABA','TÜMSEK','HIZ'],t:0,c:'genel'},
+{w:'HIZ TABELASI',f:['SINIR','HIZ','YOL','TRAFİK','SAYI'],t:1,c:'genel'},
+{w:'PARK YERİ',f:['ARABA','BIRAKMAK','ÇİZGİ','ALAN','DURMAK'],t:1,c:'genel'},
+{w:'OTOPARK',f:['ARABA','PARK','ALAN','KAPALI','AÇIK'],t:1,c:'genel'},
+{w:'VALE',f:['ARABA','PARK','HİZMET','ANAHTAR','OTEL'],t:0,c:'genel'},
+{w:'ROTA',f:['YOL','PLAN','YÖN','HARİTA','GİTMEK'],t:0,c:'genel'},
+{w:'NAVİGASYON CİHAZI',f:['YÖN','HARİTA','SES','ROTA','EKRAN'],t:1,c:'genel'},
+{w:'HARİTA UYGULAMASI',f:['YOL','NAVİGASYON','TELEFON','YÖN','ROTA'],t:1,c:'genel'},
+{w:'BİLET GİŞESİ',f:['BİLET','SATMAK','PENCERE','İSTASYON','ÖDEME'],t:1,c:'genel'},
+{w:'TURNİKE',f:['GİRİŞ','ÇIKIŞ','KONTROL','BİLET','GEÇMEK'],t:1,c:'genel'},
+{w:'KONTROL NOKTASI',f:['DENETİM','GÜVENLİK','GİRİŞ','KONTROL','YER'],t:1,c:'genel'},
+{w:'GÜVENLİK KAMERASI',f:['KAYIT','GÖRÜNTÜ','İZLEMEK','GÜVENLİK','CİHAZ'],t:1,c:'genel'},
+{w:'ALARM SİSTEMİ',f:['GÜVENLİK','SES','UYARI','SENSÖR','EV'],t:1,c:'genel'},
+{w:'SENSÖR',f:['ALGILAMAK','HAREKET','CİHAZ','VERİ','ÖLÇMEK'],t:0,c:'genel'},
+{w:'HAREKET SENSÖRÜ',f:['ALGILAMAK','HAREKET','IŞIK','GÜVENLİK','CİHAZ'],t:1,c:'genel'},
+{w:'DUMAN DEDEKTÖRÜ',f:['YANGIN','ALARM','DUMAN','GÜVENLİK','CİHAZ'],t:1,c:'genel'},
+{w:'YANGIN TÜPÜ',f:['SÖNDÜRMEK','YANGIN','BASINÇ','KIRMIZI','GÜVENLİK'],t:1,c:'genel'},
+{w:'ACİL ÇIKIŞ',f:['KAPI','GÜVENLİK','KAÇIŞ','YÖN','BİNA'],t:1,c:'genel'},
+{w:'MERDİVEN BOŞLUĞU',f:['BİNA','KAT','MERDİVEN','ALAN','BOŞLUK'],t:1,c:'genel'},
+{w:'KORİDOR',f:['GEÇİŞ','ODA','UZUN','BİNA','YOL'],t:1,c:'genel'},
+{w:'KAPI NUMARASI',f:['EV','SAYI','KAPI','ADRES','BİNA'],t:1,c:'genel'},
+{w:'ADRES',f:['YER','SOKAK','NUMARA','ŞEHİR','BULMAK'],t:0,c:'genel'},
+{w:'POSTA KUTUSU',f:['MEKTUP','KAP','BİNA','ALMAK','POSTA'],t:1,c:'genel'},
+{w:'ZARF',f:['MEKTUP','KAĞIT','KAPATMAK','ADRES','POSTA'],t:0,c:'genel'},
+{w:'KARGO',f:['PAKET','GÖNDERMEK','TAŞIMAK','TESLİM','ŞİRKET'],t:0,c:'genel'},
+{w:'KURYE',f:['PAKET','TESLİM','HIZLI','TAŞIMAK','KİŞİ'],t:0,c:'genel'},
+{w:'İMZA ATMAK',f:['BELGE','ONAY','YAZMAK','RESMİ','KABUL'],t:1,c:'genel'},
+{w:'FİŞ KESMEK',f:['ÖDEME','KASA','KAĞIT','ALIŞVERİŞ','BELGE'],t:1,c:'genel'},
+{w:'KASİYER BANKOSU',f:['ÖDEME','KASA','MARKET','PARA','SIRA'],t:1,c:'genel'},
+{w:'SIRA NUMARASI',f:['BEKLEMEK','KAĞIT','SIRA','EKRAN','HİZMET'],t:1,c:'genel'},
+{w:'BEKLEME SALONU',f:['OTURMAK','BEKLEMEK','YER','KALABALIK','ALAN'],t:1,c:'genel'},
+{w:'GİYSİ ASKISI',f:['ASMAK','KIYAFET','DOLAP','ÇUBUK','DÜZEN'],t:1,c:'genel'},
+{w:'ÇAMAŞIR İPİ',f:['ASMAK','KURUTMAK','GİYSİ','BALKON','İP'],t:1,c:'genel'},
+{w:'MANDALLIK',f:['TUTMAK','ÇAMAŞIR','İP','PLASTİK','KÜÇÜK'],t:1,c:'genel'},
+{w:'MANDALLI SEPET',f:['ÇAMAŞIR','TAŞIMAK','PLASTİK','SEPET','EV'],t:1,c:'genel'},
+{w:'SEPET',f:['TAŞIMAK','EŞYA','KAP','PLASTİK','DELİKLİ'],t:0,c:'genel'},
+{w:'PLASTİK KUTU',f:['KAP','SAKLAMAK','HAFİF','KAPAK','EŞYA'],t:1,c:'genel'},
+{w:'KARTON KUTU',f:['KAP','TAŞIMAK','SAKLAMAK','KAPAK','KARTON'],t:1,c:'genel'},
+{w:'ETİKET',f:['YAZI','YAPIŞTIRMAK','BİLGİ','ÜRÜN','KÜÇÜK'],t:0,c:'genel'},
+{w:'BARKOD',f:['ÇİZGİ','TARAMAK','ÜRÜN','KASA','KOD'],t:0,c:'genel'},
+{w:'OKUYUCU',f:['BARKOD','TARAMAK','CİHAZ','VERİ','KASA'],t:1,c:'genel'},
+{w:'KASA',f:['ÖDEME','PARA','FİŞ','MARKET','İŞLEM'],t:0,c:'genel'},
+{w:'FİŞ YAZICI',f:['KAĞIT','YAZDIRMAK','KASA','ÖDEME','CİHAZ'],t:1,c:'genel'},
+{w:'POS CİHAZI',f:['KART','ÖDEME','BANKA','CİHAZ','FİŞ'],t:1,c:'genel'},
+{w:'KART OKUYUCU',f:['KART','ÖDEME','CİHAZ','BANKA','OKUTMAK'],t:1,c:'genel'},
+{w:'TEMASSIZ ÖDEME',f:['KART','DOKUNMAK','ÖDEME','HIZLI','CİHAZ'],t:1,c:'genel'},
+{w:'ŞİFRE TUŞLARI',f:['RAKAM','BASMAK','CİHAZ','GİRİŞ','GÜVENLİK'],t:1,c:'genel'},
+{w:'DOKUNMATİK EKRAN',f:['EKRAN','DOKUNMAK','CİHAZ','PARMAK','KONTROL'],t:1,c:'genel'},
+{w:'EKRAN KORUYUCU',f:['CAM','KORUMAK','TELEFON','ÇİZİK','YÜZEY'],t:1,c:'genel'},
+{w:'TELEFON KILIFI',f:['KORUMAK','TELEFON','KAPLAMAK','PLASTİK','DARBE'],t:1,c:'genel'},
+{w:'BLUETOOTH',f:['KABLOSUZ','BAĞLANTI','CİHAZ','VERİ','MESAFE'],t:1,c:'genel'},
+{w:'Wİ-Fİ',f:['İNTERNET','KABLOSUZ','AĞ','BAĞLANTI','MODEM'],t:0,c:'genel'},
+{w:'MODEM',f:['İNTERNET','BAĞLANTI','AĞ','CİHAZ','SİNYAL'],t:0,c:'genel'},
+{w:'ROUTER',f:['AĞ','DAĞITMAK','İNTERNET','CİHAZ','SİNYAL'],t:0,c:'genel'},
+{w:'ŞİFRELİ AĞ',f:['GÜVENLİK','İNTERNET','PAROLA','BAĞLANTI','AĞ'],t:1,c:'genel'},
+{w:'ŞARJ KABLOSU',f:['TELEFON','ELEKTRİK','BAĞLANTI','ENERJİ','KABLO'],t:1,c:'genel'},
+{w:'GÜÇ BANKASI',f:['ŞARJ','TAŞINABİLİR','ENERJİ','TELEFON','PİL'],t:1,c:'genel'},
+{w:'SIM KART',f:['TELEFON','HAT','NUMARA','KÜÇÜK','İLETİŞİM'],t:1,c:'genel'},
+{w:'HAFIZA KARTI',f:['DEPOLAMA','FOTOĞRAF','VERİ','KÜÇÜK','CİHAZ'],t:1,c:'genel'},
+{w:'USB BELLEK',f:['VERİ','TAŞIMAK','BİLGİSAYAR','DEPOLAMA','KÜÇÜK'],t:1,c:'genel'},
+{w:'HARİCİ DİSK',f:['DEPOLAMA','VERİ','BÜYÜK','BİLGİSAYAR','DOSYA'],t:1,c:'genel'},
+{w:'EKRAN KARTI',f:['GÖRÜNTÜ','BİLGİSAYAR','GRAFİK','PERFORMANS','DONANIM'],t:1,c:'genel'},
+{w:'ANAKART',f:['BİLGİSAYAR','PARÇA','BAĞLANTI','SİSTEM','DONANIM'],t:1,c:'genel'},
+{w:'İŞLEMCİ',f:['BİLGİSAYAR','HIZ','İŞLEM','ÇEKİRDEK','PERFORMANS'],t:1,c:'genel'},
+{w:'KLAVYE',f:['YAZMAK','TUŞ','BİLGİSAYAR','HARF','GİRİŞ'],t:0,c:'genel'},
+{w:'FARE',f:['TIKLAMAK','İMLEÇ','BİLGİSAYAR','HAREKET','CİHAZ'],t:0,c:'genel'},
+{w:'MOUSE PAD',f:['FARE','YÜZEY','KAYMAK','MASA','KONTROL'],t:1,c:'genel'},
+{w:'MONİTÖR',f:['EKRAN','GÖRÜNTÜ','BİLGİSAYAR','BÜYÜK','PANEL'],t:1,c:'genel'},
+{w:'LAPTOP',f:['TAŞINABİLİR','BİLGİSAYAR','EKRAN','KLAVYE','PİL'],t:0,c:'genel'},
+{w:'TABLET',f:['DOKUNMATİK','EKRAN','TAŞINABİLİR','CİHAZ','UYGULAMA'],t:0,c:'genel'},
+{w:'AKILLI SAAT',f:['BİLEK','ZAMAN','BİLDİRİM','SAĞLIK','CİHAZ'],t:1,c:'genel'},
+{w:'ADIM SAYAR',f:['YÜRÜMEK','SAĞLIK','ÖLÇMEK','SPOR','CİHAZ'],t:1,c:'genel'},
+{w:'TERMAL KAMERA',f:['ISI','GÖRÜNTÜ','SICAKLIK','CİHAZ','ÖLÇMEK'],t:1,c:'genel'},
+{w:'DRONE',f:['UÇMAK','KAMERA','UZAKTAN','PERVANE','CİHAZ'],t:0,c:'genel'},
+{w:'PERVANE',f:['DÖNMEK','HAVA','DRONE','KANAT','HAREKET'],t:1,c:'genel'},
+{w:'JOYSTİCK',f:['OYUN','KONTROL','YÖN','CİHAZ','TUŞ'],t:1,c:'genel'},
+{w:'GAMEPAD',f:['OYUN','TUŞ','KONTROL','CİHAZ','KONSOL'],t:1,c:'genel'},
+{w:'KONSOL',f:['OYUN','CİHAZ','TELEVİZYON','KONTROL','EĞLENCE'],t:0,c:'genel'},
+{w:'OYUN DİSKİ',f:['OYUN','CD','KONSOL','ÇALIŞTIRMAK','VERİ'],t:1,c:'genel'},
+{w:'KAYIT CİHAZI',f:['SES','VİDEO','KAYIT','CİHAZ','DEPOLAMA'],t:1,c:'genel'},
+{w:'YAZICI',f:['KAĞIT','YAZDIRMAK','MÜREKKEP','CİHAZ','ÇIKTI'],t:0,c:'genel'},
+{w:'TARAYICI',f:['BELGE','TARAMAK','GÖRÜNTÜ','CİHAZ','KAĞIT'],t:1,c:'genel'},
+{w:'FOTOKOPİ MAKİNESİ',f:['ÇOĞALTMAK','BELGE','KAĞIT','KOPYA','CİHAZ'],t:1,c:'genel'},
+{w:'OFİS KOLTUĞU',f:['OTURMAK','RAHAT','TEKERLEK','MASA','OFİS'],t:1,c:'genel'},
+{w:'TOPLANTI MASASI',f:['GRUP','KONUŞMAK','KARAR','MASA','OFİS'],t:1,c:'genel'},
+{w:'NOT DEFTERİ',f:['YAZMAK','KÜÇÜK','NOT','KAĞIT','TAŞIMAK'],t:1,c:'genel'},
+{w:'KALEMLİK',f:['KALEM','KAP','MASA','DÜZEN','SAKLAMAK'],t:1,c:'genel'},
+{w:'ZIMBA TELİ',f:['METAL','KAĞIT','BİRLEŞTİRMEK','KÜÇÜK','OFİS'],t:1,c:'genel'},
+{w:'DELGEÇ',f:['KAĞIT','DELİK','OFİS','BASMAK','ALET'],t:0,c:'genel'},
+{w:'KAĞIT KESİCİ',f:['KESMEK','KAĞIT','BIÇAK','DÜZ','ALET'],t:1,c:'genel'},
+{w:'YAPIŞTIRICI',f:['YAPIŞTIRMAK','KAĞIT','SIVI','TUTMAK','OFİS'],t:1,c:'genel'},
+{w:'BANT',f:['YAPIŞTIRMAK','ŞEFFAF','KAĞIT','TUTMAK','OFİS'],t:0,c:'genel'},
+{w:'ŞEFFAF DOSYA',f:['BELGE','SAKLAMAK','PLASTİK','DÜZEN','OFİS'],t:1,c:'genel'},
+{w:'ARŞİV KUTUSU',f:['BELGE','SAKLAMAK','KUTU','DÜZEN','OFİS'],t:1,c:'genel'},
+{w:'İŞ TAKVİMİ',f:['TARİH','PLAN','GÜN','İŞ','AJANDA'],t:1,c:'genel'},
+{w:'ZAMANLAYICI',f:['SÜRE','AYARLAMAK','ALARM','ZAMAN','CİHAZ'],t:1,c:'genel'},
+{w:'KRONOMETRE',f:['ÖLÇMEK','SÜRE','SANİYE','ZAMAN','CİHAZ'],t:1,c:'genel'},
+{w:'TAKİP LİSTESİ',f:['GÖREV','PLAN','KONTROL','YAZMAK','DÜZEN'],t:1,c:'genel'},
+{w:'YAPILACAKLAR LİSTESİ',f:['GÖREV','PLAN','YAZMAK','DÜZEN','İŞ'],t:1,c:'genel'},
+{w:'HATIRLATICI',f:['ALARM','GÖREV','ZAMAN','BİLDİRİM','UNUTMAK'],t:1,c:'genel'},
+{w:'BİLDİRİM',f:['MESAJ','UYARI','TELEFON','EKRAN','BİLGİ'],t:1,c:'genel'},
+{w:'E-POSTA',f:['MESAJ','İNTERNET','YAZMAK','GÖNDERMEK','ADRES'],t:0,c:'genel'},
+{w:'KULLANICI ADI',f:['GİRİŞ','HESAP','İSİM','SİSTEM','KİMLİK'],t:1,c:'genel'},
+{w:'PAROLA',f:['ŞİFRE','GÜVENLİK','GİRİŞ','GİZLİ','HESAP'],t:0,c:'genel'},
+{w:'HESAP',f:['KULLANICI','GİRİŞ','SİSTEM','PROFİL','VERİ'],t:0,c:'genel'},
+{w:'PROFİL',f:['KULLANICI','BİLGİ','HESAP','FOTOĞRAF','DETAY'],t:0,c:'genel'},
+{w:'AYARLAR MENÜSÜ',f:['SEÇENEK','SİSTEM','DEĞİŞTİRMEK','KONTROL','CİHAZ'],t:1,c:'genel'},
+{w:'GİZLİLİK',f:['VERİ','KORUMA','GÜVENLİK','BİLGİ','KULLANICI'],t:1,c:'genel'},
+{w:'YEDEKLEME',f:['VERİ','SAKLAMAK','KOPYA','GÜVENLİK','DEPOLAMA'],t:1,c:'genel'},
+{w:'GÜNCELLEME',f:['YAZILIM','YENİ','SÜRÜM','YÜKLEMEK','SİSTEM'],t:1,c:'genel'},
+{w:'YÜKLEME',f:['İNDİRMEK','KURMAK','VERİ','SİSTEM','İŞLEM'],t:1,c:'genel'},
+{w:'İNDİRME',f:['DOSYA','ALMAK','İNTERNET','VERİ','YÜKLEME'],t:1,c:'genel'},
+{w:'YÜKLEME ÇUBUĞU',f:['İLERLEME','EKRAN','YÜZDE','İŞLEM','GÖRSEL'],t:1,c:'genel'},
+{w:'İLERLEME YÜZDESİ',f:['SAYI','TAMAMLANMA','İŞLEM','EKRAN','ORAN'],t:1,c:'genel'},
+{w:'HATA MESAJI',f:['UYARI','EKRAN','SORUN','YAZI','SİSTEM'],t:1,c:'genel'},
+{w:'DONMA',f:['TEPKİ','YOK','EKRAN','SİSTEM','SORUN'],t:0,c:'genel'},
+{w:'YENİDEN BAŞLATMA',f:['KAPATMAK','AÇMAK','SİSTEM','CİHAZ','RESET'],t:1,c:'genel'},
+{w:'KAPATMA TUŞU',f:['CİHAZ','KAPATMAK','BASMAK','GÜÇ','DÜĞME'],t:1,c:'genel'},
+{w:'AÇMA TUŞU',f:['CİHAZ','AÇMAK','BASMAK','GÜÇ','DÜĞME'],t:1,c:'genel'},
+{w:'GÜÇ DÜĞMESİ',f:['AÇMAK','KAPATMAK','CİHAZ','BASMAK','ENERJİ'],t:1,c:'genel'},
+{w:'SES AÇMA',f:['ARTIRMAK','SES','DÜĞME','CİHAZ','KONTROL'],t:1,c:'genel'},
+{w:'SES KISMA',f:['AZALTMAK','SES','DÜĞME','CİHAZ','KONTROL'],t:1,c:'genel'},
+{w:'SESSİZ MOD',f:['SES','KAPATMAK','TELEFON','BİLDİRİM','MOD'],t:1,c:'genel'},
+{w:'UÇAK MODU',f:['SİNYAL','KAPATMAK','TELEFON','UÇUŞ','MOD'],t:1,c:'genel'},
+{w:'VERİ KULLANIMI',f:['İNTERNET','MİKTAR','TELEFON','AĞ','ÖLÇMEK'],t:1,c:'genel'},
+{w:'Wİ-Fİ ŞİFRESİ',f:['İNTERNET','PAROLA','BAĞLANTI','AĞ','GÜVENLİK'],t:1,c:'genel'},
+{w:'HOTSPOT',f:['İNTERNET','PAYLAŞMAK','TELEFON','AĞ','BAĞLANTI'],t:1,c:'genel'},
+{w:'QR KOD',f:['KARE','TARAMAK','TELEFON','BAĞLANTI','KOD'],t:0,c:'genel'},
+{w:'TARAYICI UYGULAMA',f:['İNTERNET','SİTE','GEZMEK','EKRAN','ADRES'],t:1,c:'genel'},
+{w:'ADRES ÇUBUĞU',f:['WEB','YAZMAK','SİTE','ÜST','TARAYICI'],t:1,c:'genel'},
+{w:'SEKME',f:['TARAYICI','ÇOKLU','SAYFA','GEÇİŞ','EKRAN'],t:0,c:'genel'},
+{w:'YER İMİ',f:['KAYDETMEK','SİTE','HIZLI','ERİŞİM','TARAYICI'],t:0,c:'genel'},
+{w:'GEÇMİŞ',f:['ZİYARET','SİTE','LİSTE','TARAYICI','KAYIT'],t:0,c:'genel'},
+{w:'ÇIKIŞ YAPMAK',f:['HESAP','KAPATMAK','KULLANICI','SİSTEM','GİRİŞ'],t:1,c:'genel'},
+{w:'GİRİŞ YAPMAK',f:['HESAP','KULLANICI','ŞİFRE','SİSTEM','ERİŞİM'],t:1,c:'genel'},
+{w:'KAYDOLMAK',f:['HESAP','OLUŞTURMAK','KULLANICI','BİLGİ','SİSTEM'],t:1,c:'genel'},
+{w:'DOĞRULAMA KODU',f:['GÜVENLİK','SMS','GİRİŞ','SAYI','HESAP'],t:1,c:'genel'},
+{w:'FAVORİLER LİSTESİ',f:['KAYDETMEK','HIZLI','ERİŞİM','UYGULAMA','LİSTE'],t:1,c:'genel'},
+{w:'UYGULAMA SİMGESİ',f:['İKON','EKRAN','DOKUNMAK','TELEFON','AÇMAK'],t:1,c:'genel'},
+{w:'ANA EKRAN',f:['TELEFON','UYGULAMA','SİMGE','BAŞLANGIÇ','SAYFA'],t:1,c:'genel'},
+{w:'BİLDİRİM PANELİ',f:['MESAJ','UYARI','EKRAN','ÇEKMEK','LİSTE'],t:1,c:'genel'},
+{w:'KONTROL MERKEZİ',f:['AYARLAR','HIZLI','DÜĞME','EKRAN','SEÇENEK'],t:1,c:'genel'},
+{w:'PARMAK İZİ',f:['GÜVENLİK','KİLİT','TELEFON','DOKUNMAK','AÇMAK'],t:1,c:'genel'},
+{w:'YÜZ TANIMA',f:['KAMERA','GÜVENLİK','TELEFON','YÜZ','AÇMAK'],t:1,c:'genel'},
+{w:'EKRAN KİLİDİ',f:['GÜVENLİK','ŞİFRE','TELEFON','KAPALI','AÇMAK'],t:1,c:'genel'},
+{w:'KİLİDİ AÇMAK',f:['TELEFON','ŞİFRE','EKRAN','GİRİŞ','GÜVENLİK'],t:1,c:'genel'},
+{w:'TİTREŞİM MODU',f:['SESSİZ','TELEFON','UYARI','MOD','TİTREŞİM'],t:1,c:'genel'},
+{w:'ZİL SESİ',f:['TELEFON','SES','ARAMA','ÇALMAK','AYAR'],t:1,c:'genel'},
+{w:'DUVAR KAĞIDI',f:['ARKA PLAN','EKRAN','RESİM','TELEFON','GÖRÜNÜM'],t:1,c:'genel'},
+{w:'EKRAN PARLAKLIĞI',f:['IŞIK','ARTIRMAK','AZALTMAK','EKRAN','AYAR'],t:1,c:'genel'},
+{w:'GECE MODU',f:['KARANLIK','EKRAN','GÖZ','TELEFON','AYAR'],t:1,c:'genel'},
+{w:'OKUMA MODU',f:['EKRAN','GÖZ','RAHAT','METİN','AYAR'],t:1,c:'genel'},
+{w:'UYGULAMA MAĞAZASI',f:['İNDİRMEK','UYGULAMA','TELEFON','MAĞAZA','LİSTE'],t:1,c:'genel'},
+{w:'YORUM YAPMAK',f:['YAZMAK','FİKİR','DEĞERLENDİRME','KULLANICI','PAYLAŞMAK'],t:1,c:'genel'},
+{w:'PUAN VERMEK',f:['YILDIZ','DEĞERLENDİRME','UYGULAMA','YORUM','SAYI'],t:1,c:'genel'},
+{w:'GÜNLÜK HEDEF',f:['PLAN','HEDEF','TAKİP','GÖREV','İLERLEME'],t:1,c:'genel'},
+{w:'SAĞLIK UYGULAMASI',f:['ADIM','KALP','ÖLÇMEK','TELEFON','VERİ'],t:1,c:'genel'},
+{w:'SU HATIRLATICI',f:['İÇMEK','SU','BİLDİRİM','SAĞLIK','ZAMAN'],t:1,c:'genel'},
+{w:'UYKU TAKİBİ',f:['UYUMAK','SAAT','VERİ','SAĞLIK','GECE'],t:1,c:'genel'},
+{w:'KALORİ SAYACI',f:['YEMEK','ÖLÇMEK','SAĞLIK','SAYI','DİYET'],t:1,c:'genel'},
+{w:'EGZERSİZ PROGRAMI',f:['SPOR','PLAN','HAREKET','ANTRENMAN','SAĞLIK'],t:1,c:'genel'},
+{w:'ISINMA HAREKETİ',f:['SPOR','BAŞLANGIÇ','KAS','HAZIRLIK','HAREKET'],t:1,c:'genel'},
+{w:'SOĞUMA HAREKETİ',f:['SPOR','BİTİŞ','RAHATLAMAK','KAS','ESNEME'],t:1,c:'genel'},
+{w:'ESNEME HAREKETİ',f:['KAS','UZATMAK','SPOR','ESNEKLİK','HAREKET'],t:1,c:'genel'},
+{w:'DENGE TAHTASI',f:['DENGE','SPOR','AYAKTA','EGZERSİZ','CİHAZ'],t:1,c:'genel'},
+{w:'YOGA MATI',f:['ZEMİN','SPOR','YOGA','ESNEME','MİNDER'],t:1,c:'genel'},
+{w:'FİTNESS BANDI',f:['LASTİK','SPOR','DİRENÇ','EGZERSİZ','ESNEME'],t:1,c:'genel'},
+{w:'AĞIRLIK PLAKASI',f:['SPOR','DEMİR','KİLO','KALDIRMAK','FİTNESS'],t:1,c:'genel'},
+{w:'HALTER BARI',f:['SPOR','DEMİR','KALDIRMAK','AĞIRLIK','UZUN'],t:1,c:'genel'},
+{w:'DAMBIL',f:['SPOR','AĞIRLIK','KALDIRMAK','FİTNESS','KÜÇÜK'],t:0,c:'genel'},
+{w:'KOŞU BANDI',f:['YÜRÜMEK','KOŞMAK','SPOR','ELEKTRİK','CİHAZ'],t:1,c:'genel'},
+{w:'BİSİKLET ERGOMETRE',f:['PEDAL','SPOR','SABİT','EGZERSİZ','CİHAZ'],t:1,c:'genel'},
+{w:'SPOR ÇANTASI',f:['EŞYA','TAŞIMAK','SPOR','GİYSİ','BÜYÜK'],t:1,c:'genel'},
+{w:'TER BANDI',f:['TER','ALIN','SPOR','EMMEK','KUMAŞ'],t:1,c:'genel'},
+{w:'PROTEİN TOZU',f:['SPOR','KAS','İÇECEK','BESİN','FİTNESS'],t:1,c:'genel'},
+{w:'VİTAMİN HAPI',f:['SAĞLIK','KÜÇÜK','ALMAK','BESİN','DESTEK'],t:1,c:'genel'},
+{w:'İLAÇ KUTUSU',f:['HAP','SAKLAMAK','DÜZEN','KÜÇÜK','SAĞLIK'],t:1,c:'genel'},
+{w:'TERMAL BATTANİYE',f:['SICAK','ACİL','KURTARMA','ÖRTÜ','İNCE'],t:1,c:'genel'},
+{w:'BANDAJ',f:['YARA','SARMAK','SAĞLIK','BEZ','KORUMAK'],t:0,c:'genel'},
+{w:'YARA BANDI',f:['KÜÇÜK','YARA','YAPIŞTIRMAK','SAĞLIK','KORUMA'],t:1,c:'genel'},
+{w:'DEZENFEKTAN',f:['TEMİZLİK','MİKROP','SIVI','HİJYEN','EL'],t:1,c:'genel'},
+{w:'MASKE',f:['YÜZ','KORUMAK','SAĞLIK','TAKMAK','FİLTRE'],t:0,c:'genel'},
+{w:'ELDİVEN LATEKS',f:['EL','KORUMA','SAĞLIK','İNCE','TEK KULLANIMLIK'],t:1,c:'genel'},
+{w:'GÖZ DAMLASI',f:['GÖZ','SIVI','DAMLATMAK','SAĞLIK','BAKIM'],t:1,c:'genel'},
+{w:'ATEŞ ÖLÇER',f:['DERECE','SICAKLIK','ÖLÇMEK','SAĞLIK','CİHAZ'],t:1,c:'genel'},
+{w:'KULAK TERMOMETRESİ',f:['SICAKLIK','ÖLÇMEK','KULAK','SAĞLIK','CİHAZ'],t:1,c:'genel'},
+{w:'TANSİYON ALETİ',f:['ÖLÇMEK','BASINÇ','SAĞLIK','KOL','CİHAZ'],t:1,c:'genel'},
+{w:'ŞEKER ÖLÇER',f:['KAN','ÖLÇMEK','DİYABET','SAĞLIK','CİHAZ'],t:1,c:'genel'},
+{w:'TEST ŞERİDİ',f:['ÖLÇMEK','ANALİZ','SAĞLIK','CİHAZ','KÜÇÜK'],t:1,c:'genel'},
+{w:'LABORATUVAR TÜPÜ',f:['DENEY','SIVI','CAM','TEST','BİLİM'],t:1,c:'genel'},
+{w:'PETRİ KABI',f:['BAKTERİ','DENEY','YUVARLAK','CAM','LABORATUVAR'],t:1,c:'genel'},
+{w:'MİKROP KÜLTÜRÜ',f:['BAKTERİ','BÜYÜTMEK','DENEY','SAĞLIK','BİLİM'],t:1,c:'genel'},
+{w:'BÜYÜTEÇ',f:['YAKINLAŞTIRMAK','CAM','GÖRMEK','KÜÇÜK','İNCELEMEK'],t:1,c:'genel'},
+{w:'HARİTA PUSULA',f:['YÖN','KUZEY','BULMAK','SEYAHAT','CİHAZ'],t:1,c:'genel'},
+{w:'KAMP OCAĞI',f:['ATEŞ','PİŞİRMEK','DOĞA','GAZ','KÜÇÜK'],t:1,c:'genel'},
+{w:'UYKU TULUMU',f:['KAMP','SICAK','UYKU','ÇADIR','ÖRTÜ'],t:1,c:'genel'},
+{w:'KAMP SANDALYESİ',f:['OTURMAK','KATLANIR','HAFİF','DOĞA','TAŞIMAK'],t:1,c:'genel'},
+{w:'FENER',f:['IŞIK','KARANLIK','PİL','GECE','AYDINLATMAK'],t:0,c:'genel'},
+{w:'EL FENERİ',f:['IŞIK','TUTMAK','PİL','GECE','TAŞIMAK'],t:1,c:'genel'},
+{w:'KAFA LAMBASI',f:['BAŞ','IŞIK','GECE','KAMP','PİL'],t:1,c:'genel'},
+{w:'PUSULA SAAT',f:['YÖN','SAAT','KUZEY','BİLEK','CİHAZ'],t:1,c:'genel'},
+{w:'HALAT',f:['KALIN','BAĞLAMAK','ÇEKMEK','İP','GÜÇLÜ'],t:0,c:'genel'},
+{w:'KARABİNA',f:['TIRMANIŞ','METAL','BAĞLAMAK','KİLİT','HALKA'],t:1,c:'genel'},
+{w:'ÇADIR',f:['KAMP','UYUMAK','KUMAŞ','DOĞA','KURMAK'],t:0,c:'genel'},
+{w:'ÇADIR DİREĞİ',f:['DESTEK','ÇADIR','KURMAK','UZUN','METAL'],t:1,c:'genel'},
+{w:'ÇADIR KAZIĞI',f:['SABİTLEMEK','TOPRAK','ÇADIR','ÇAKMAK','METAL'],t:1,c:'genel'},
+{w:'UYKU MASKESİ',f:['GÖZ','KAPATMAK','UYKU','KARANLIK','RAHAT'],t:1,c:'genel'},
+{w:'KULAK TIKACI',f:['SES','AZALTMAK','KULAK','UYKU','KÜÇÜK'],t:1,c:'genel'},
+{w:'SIRT ÇANTASI',f:['TAŞIMAK','EŞYA','OMUZ','BÜYÜK','YOLCULUK'],t:1,c:'genel'},
+{w:'MATARA',f:['SU','İÇMEK','TAŞIMAK','SPOR','KAP'],t:0,c:'genel'},
+{w:'TERMOS BARDAK',f:['SICAK','İÇECEK','KAP','KORUMAK','TAŞIMAK'],t:1,c:'genel'},
+{w:'KAMP BIÇAĞI',f:['KESMEK','DOĞA','ALET','KESKİN','KÜÇÜK'],t:1,c:'genel'},
+{w:'ISLAK MENDİL',f:['TEMİZLİK','NEMLİ','SİLMEK','KÜÇÜK','PAKET'],t:1,c:'genel'},
+{w:'TUVALET KAĞIDI',f:['BANYO','RULO','KAĞIT','TEMİZLİK','YUMUŞAK'],t:1,c:'genel'},
+{w:'SABUNLUK',f:['SABUN','KAP','BANYO','TUTMAK','PLASTİK'],t:1,c:'genel'},
+{w:'DİŞ İPİ',f:['DİŞ','TEMİZLİK','ARASI','İNCE','AĞIZ'],t:0,c:'genel'},
+{w:'AĞIZ ÇALKALAMA',f:['SIVI','TEMİZLİK','AĞIZ','NANE','SAĞLIK'],t:1,c:'genel'},
+{w:'TIRAŞ MAKİNESİ',f:['KESMEK','SAKAL','ELEKTRİK','CİHAZ','YÜZ'],t:1,c:'genel'},
+{w:'TIRAŞ KÖPÜĞÜ',f:['YÜZ','SAKAL','YUMUŞATMAK','KÖPÜK','TIRAŞ'],t:1,c:'genel'},
+{w:'AFTERSHAVE',f:['KOKU','YÜZ','SERİN','TIRAŞ','BAKIM'],t:1,c:'genel'},
+{w:'PARFÜM',f:['KOKU','SPREY','GÜZEL','SIKMAK','ŞİŞE'],t:0,c:'genel'},
+{w:'DEODORANT',f:['KOKU','TER','KOLTUK ALTI','SPREY','HİJYEN'],t:1,c:'genel'},
+{w:'ROLL-ON',f:['KOKU','TER','SÜRMEK','KÜÇÜK','HİJYEN'],t:0,c:'genel'},
+{w:'KREM',f:['CİLT','SÜRMEK','BAKIM','NEM','TÜP'],t:0,c:'genel'},
+{w:'GÜNEŞ KREMİ',f:['GÜNEŞ','KORUMAK','CİLT','YAZ','SPF'],t:1,c:'genel'},
+{w:'LOSYON',f:['CİLT','NEM','SÜRMEK','BAKIM','SIVI'],t:0,c:'genel'},
+{w:'ALLIK',f:['YANAK','RENK','MAKYAJ','SÜRMEK','FIRÇA'],t:0,c:'genel'},
+{w:'MASKARA',f:['KİRPİK','SİYAH','UZATMAK','MAKYAJ','GÖZ'],t:1,c:'genel'},
+{w:'GÖZ KALEMİ',f:['GÖZ','ÇİZMEK','MAKYAJ','SİYAH','SÜRMEK'],t:1,c:'genel'},
+{w:'FAR PALETİ',f:['RENK','GÖZ','MAKYAJ','TON','KUTU'],t:1,c:'genel'},
+{w:'MAKYAJ FIRÇASI',f:['SÜRMEK','MAKYAJ','KIL','YÜZ','ARAÇ'],t:1,c:'genel'},
+{w:'AYNA CEP',f:['KÜÇÜK','YANSIMA','TAŞIMAK','MAKYAJ','ÇANTA'],t:1,c:'genel'},
+{w:'TAKI KUTUSU',f:['YÜZÜK','KOLYE','SAKLAMAK','KÜÇÜK','KAP'],t:1,c:'genel'},
+{w:'KOLYE',f:['BOYUN','TAKI','ZİNCİR','SÜS','AKSESUAR'],t:0,c:'genel'},
+{w:'BİLEKLİK',f:['BİLEK','TAKI','SÜS','AKSESUAR','ZİNCİR'],t:1,c:'genel'},
+{w:'YÜZÜK',f:['PARMAK','TAKI','ALTIN','EVLİLİK','AKSESUAR'],t:0,c:'genel'},
+{w:'KÜPE',f:['KULAK','TAKI','DELİK','SÜS','AKSESUAR'],t:0,c:'genel'},
+{w:'SAAT KAYIŞI',f:['BİLEK','SAAT','BAĞLAMAK','DERİ','PARÇA'],t:1,c:'genel'},
+{w:'GÖZLÜK KABI',f:['GÖZLÜK','KORUMAK','KUTU','SERT','TAŞIMAK'],t:1,c:'genel'},
+{w:'TEMİZLİK BEZİ',f:['SİLMEK','TOZ','YÜZEY','BEZ','TEMİZLİK'],t:1,c:'genel'},
+{w:'TOZ FIRÇASI',f:['TEMİZLİK','KÜÇÜK','KIL','YÜZEY','SİLMEK'],t:1,c:'genel'},
+{w:'SÜPÜRGE BORUSU',f:['UZATMAK','SÜPÜRGE','PARÇA','ÇEKMEK','UZUN'],t:1,c:'genel'},
+{w:'TOZ TORBASI',f:['SÜPÜRGE','DOLMAK','KİR','ATMAK','KAP'],t:1,c:'genel'},
+{w:'FİLTRE SÜPÜRGE',f:['TEMİZ','HAVA','SÜZMEK','PARÇA','CİHAZ'],t:1,c:'genel'},
+{w:'KAR YAĞIŞI',f:['KIŞ','SOĞUK','BEYAZ','GÖKYÜZÜ','TANELER'],t:1,c:'genel'},
+{w:'TİPİ',f:['FIRTINA','KAR','RÜZGAR','ŞİDDETLİ','KIŞ'],t:0,c:'genel'},
+{w:'BUZ SARKITI',f:['BUZ','SARKMAK','ÇATI','SOĞUK','SİVRİ'],t:1,c:'genel'},
+{w:'KARDAN ADAM',f:['YAPMAK','HAVUÇ','KAR','KIŞ','ÇOCUK'],t:1,c:'genel'},
+{w:'KIZAK',f:['KAYMAK','KAR','YOKUŞ','KIŞ','EĞLENCE'],t:0,c:'genel'},
+{w:'KIRAĞI',f:['BUZ','YÜZEY','SABAH','SOĞUK','İNCE'],t:0,c:'genel'},
+{w:'ŞÖMİNE',f:['ATEŞ','ODUN','SICAK','EV','KIŞ'],t:0,c:'genel'},
+{w:'SICAK ÇİKOLATA',f:['İÇECEK','SICAK','TATLI','KIŞ','KUPA'],t:1,c:'genel'},
+{w:'KARTOPU',f:['ATMAK','OYUN','KAR','KIŞ','YUVARLAK'],t:1,c:'genel'},
+{w:'KAR BOTU',f:['AYAKKABI','SICAK','SU GEÇİRMEZ','KIŞ','AYAK'],t:1,c:'genel'},
+{w:'BERE',f:['ŞAPKA','BAŞ','SICAK','ÖRGÜ','KIŞ'],t:0,c:'genel'},
+{w:'TERMAL KIYAFET',f:['SICAK','VÜCUT','İÇLİK','KIŞ','GİYSİ'],t:1,c:'genel'},
+{w:'BUZ PATENİ',f:['PİST','KAYMAK','KIŞ','SPOR','BIÇAK'],t:1,c:'genel'},
+{w:'SNOWBOARD',f:['TAHTA','KAR','KAYMAK','SPOR','KIŞ'],t:1,c:'genel'},
+{w:'DONMUŞ GÖL',f:['BUZ','SU','KIŞ','YÜZEY','SOĞUK'],t:1,c:'genel'},
+{w:'KAR FIRTINASI',f:['YOĞUN','KAR','RÜZGAR','KIŞ','HAVA'],t:1,c:'genel'},
+{w:'BUZLU YOL',f:['KAYGAN','ARABA','TEHLİKE','KIŞ','YOL'],t:1,c:'genel'},
+{w:'ISITICI',f:['SICAK','ODA','CİHAZ','KIŞ','ISI'],t:1,c:'genel'},
+{w:'KALORİFER',f:['ISI','METAL','ODA','SICAK','SİSTEM'],t:1,c:'genel'},
+{w:'KALIN BATTANİYE',f:['YUMUŞAK','ÖRTMEK','UYKU','KIŞ','SICAK'],t:1,c:'genel'},
+{w:'MUM IŞIĞI',f:['ALEV','LOŞ','SICAK','GECE','HUZUR'],t:1,c:'genel'},
+{w:'DAĞ EVİ',f:['AHŞAP','SICAK','ORMAN','KIŞ','KONAKLAMA'],t:0,c:'genel'},
+{w:'YILBAŞI AĞACI',f:['SÜS','IŞIK','ÇAM','YIL','KUTLAMA'],t:1,c:'genel'},
+{w:'IŞIK SÜSLERİ',f:['PARLAK','RENKLİ','DEKOR','KIŞ','GECE'],t:1,c:'genel'},
+{w:'KAR MELEĞİ',f:['ŞEKİL','KAR','UZANMAK','KIŞ','OYUN'],t:1,c:'genel'},
+{w:'BUZ BALIKÇILIĞI',f:['DELİK','GÖL','SOĞUK','OLTA','KIŞ'],t:1,c:'genel'},
+{w:'SICAK ÇORBA',f:['SICAK','KASE','YEMEK','BUHAR','KIŞ'],t:1,c:'genel'},
+{w:'DONMUŞ CAM',f:['BUZ','PENCERE','DESEN','SOĞUK','SABAH'],t:1,c:'genel'},
+{w:'UZUN GECELER',f:['KARANLIK','KIŞ','ERKEN','ZAMAN','GECE'],t:1,c:'genel'},
+{w:'RÜZGAR ÜŞÜTMESİ',f:['SOĞUK','HİS','SICAKLIK','KIŞ','CİLT'],t:1,c:'genel'},
+{w:'BUZ PİSTİ',f:['KAYMAK','YÜZEY','KIŞ','SPOR','ALAN'],t:1,c:'genel'},
+{w:'KAR KÜREĞİ',f:['KAZMAK','TEMİZLEMEK','KAR','ALET','KIŞ'],t:1,c:'genel'},
+{w:'KALIN ÇORAP',f:['SICAK','AYAK','KIŞ','YÜN','GİYSİ'],t:1,c:'genel'},
+{w:'TERMOS',f:['SICAK','İÇECEK','KORUMAK','ŞİŞE','KIŞ'],t:0,c:'genel'},
+{w:'SOĞUK DALGASI',f:['ANİ','DÜŞÜŞ','SICAKLIK','KIŞ','HAVA'],t:1,c:'genel'},
+{w:'DOLU',f:['BUZ','YAĞIŞ','SERT','FIRTINA','KÜÇÜK'],t:0,c:'genel'},
+{w:'GİZLİ BUZ',f:['GÖRÜNMEZ','KAYGAN','YOL','TEHLİKE','KIŞ'],t:1,c:'genel'},
+{w:'KAR ZİNCİRİ',f:['LASTİK','TUTUŞ','ARABA','KIŞ','YOL'],t:1,c:'genel'},
+{w:'KIŞ LASTİĞİ',f:['ARAÇ','YOL','GÜVENLİ','KAR','SÜRÜŞ'],t:1,c:'genel'},
+{w:'DONMUŞ BORU',f:['SU','PATLAMAK','EV','KIŞ','SOĞUK'],t:1,c:'genel'},
+{w:'BUZ KAZIYICI',f:['ARABA','CAM','TEMİZLEMEK','ALET','KIŞ'],t:1,c:'genel'},
+{w:'BUZ ÇÖZMEK',f:['ERİTMEK','SICAK','CAM','ARABA','İŞLEM'],t:1,c:'genel'},
+{w:'KAR TAHMİNİ',f:['HAVA','RAPOR','KIŞ','YAĞIŞ','BİLGİ'],t:1,c:'genel'},
+{w:'KAR TATİLİ',f:['OKUL','İPTAL','EĞLENCE','KIŞ','GÜN'],t:1,c:'genel'},
+{w:'KIŞ TATİLİ',f:['OKUL','DİNLENME','SEZON','ZAMAN','MOLA'],t:1,c:'genel'},
+{w:'YILBAŞI GECESİ',f:['GECE','GERİ SAYIM','KUTLAMA','SAAT','YIL'],t:1,c:'genel'},
+{w:'ŞARKI SÖYLEMEK',f:['GRUP','KUTLAMA','YILBAŞI','MÜZİK','KIŞ'],t:1,c:'genel'},
+{w:'HEDİYELEŞMEK',f:['PAKET','ALMAK','VERMEK','YILBAŞI','SÜRPRİZ'],t:1,c:'genel'},
+{w:'KIŞ FESTİVALİ',f:['ETKİNLİK','IŞIK','SOĞUK','KUTLAMA','SEZON'],t:1,c:'genel'},
+{w:'BUZ HEYKELİ',f:['SANAT','OYMA','BUZ','SERGİ','KIŞ'],t:1,c:'genel'},
+{w:'DONMUŞ ŞELALE',f:['BUZ','DOĞA','UÇURUM','KIŞ','MANZARA'],t:1,c:'genel'},
+{w:'KUTUP IŞIKLARI',f:['GÖKYÜZÜ','RENKLİ','KUZEY','GECE','DOĞA'],t:1,c:'genel'},
+{w:'KUTUP GECESİ',f:['KARANLIK','UZUN','GÜNEŞ YOK','BÖLGE','KIŞ'],t:1,c:'genel'},
+{w:'KAR MOTORU',f:['ARAÇ','KAR','HIZ','SÜRMEK','KIŞ'],t:1,c:'genel'},
+{w:'KAPÜŞON',f:['BAŞ','MONT','KORUMAK','SICAK','GİYSİ'],t:1,c:'genel'},
+{w:'EL ISITICI',f:['KÜÇÜK','SICAK','CEP','KIŞ','ALET'],t:1,c:'genel'},
+{w:'KAYAK GÖZLÜĞÜ',f:['GÖZ','KORUMA','KAR','SPOR','PARLAMA'],t:1,c:'genel'},
+{w:'KAYAK BİLETİ',f:['GİRİŞ','KAYAK','TESİS','KART','DAĞ'],t:1,c:'genel'},
+{w:'PİST HARİTASI',f:['YOL','KAYAK','YÖN','DAĞ','REHBER'],t:1,c:'genel'},
+{w:'SNOWPARK',f:['ATLAYIŞ','HAREKET','SNOWBOARD','KAYAK','ALAN'],t:1,c:'genel'},
+{w:'BUZ OTELİ',f:['DONMUŞ','ODA','SOĞUK','KONAKLAMA','FARKLI'],t:1,c:'genel'},
+{w:'SOĞUK SABAH',f:['ERKEN','KIRAĞI','SESSİZ','KIŞ','HAVA'],t:1,c:'genel'},
+{w:'BAHAR',f:['MEVSİM','ÇİÇEK','ILIK','DOĞA','YENİLENME'],t:0,c:'genel'},
+{w:'ÇİÇEK AÇMAK',f:['TOMURCUK','BAHAR','RENKLİ','BİTKİ','AÇILMAK'],t:1,c:'genel'},
+{w:'İLKBAHAR RÜZGARI',f:['HAFİF','ESİNTİ','TEMİZ','HAVA','ILIK'],t:1,c:'genel'},
+{w:'LALE',f:['ÇİÇEK','RENKLİ','BAHAR','SOĞAN','BİTKİ'],t:0,c:'genel'},
+{w:'POLEN',f:['ALERJİ','SARI','BİTKİ','BAHAR','TOZ'],t:0,c:'genel'},
+{w:'TAZE ÇİM',f:['YEŞİL','KOKU','KESMEK','BAHAR','ZEMİN'],t:1,c:'genel'},
+{w:'PİKNİK',f:['DIŞARI','YEMEK','ÖRTÜ','PARK','DİNLENMEK'],t:0,c:'genel'},
+{w:'NERGİS',f:['SARI','ÇİÇEK','BAHAR','SOĞAN','KOKU'],t:0,c:'genel'},
+{w:'KİRAZ ÇİÇEĞİ',f:['PEMBE','AĞAÇ','JAPONYA','BAHAR','YAPRAK'],t:1,c:'genel'},
+{w:'KUŞ YUVASI',f:['DALLAR','YUMURTA','KUŞ','EV','BAHAR'],t:1,c:'genel'},
+{w:'KUŞ CIVILTISI',f:['SES','SABAH','BAHAR','DOĞA','ÖTMEK'],t:1,c:'genel'},
+{w:'NİSAN YAĞMURU',f:['SU','BULUT','BAHAR','KISA','YAĞIŞ'],t:1,c:'genel'},
+{w:'TOHUM EKMEK',f:['TOPRAK','BÜYÜMEK','BAHAR','BİTKİ','BAŞLANGIÇ'],t:1,c:'genel'},
+{w:'ÇİÇEKLİK',f:['BAHÇE','RENKLİ','TOPRAK','BİTKİ','DÜZEN'],t:1,c:'genel'},
+{w:'GÜNEŞ IŞIĞI',f:['PARLAK','SICAK','GÖKYÜZÜ','BAHAR','IŞIK'],t:1,c:'genel'},
+{w:'DOĞA YÜRÜYÜŞÜ',f:['YOL','TEMİZ HAVA','BAHAR','KEŞİF','YÜRÜMEK'],t:1,c:'genel'},
+{w:'YEŞEREN AĞAÇLAR',f:['YAPRAK','TAZE','BAHAR','DOĞA','BÜYÜME'],t:1,c:'genel'},
+{w:'TOMURCUK',f:['KÜÇÜK','YENİ','BİTKİ','AÇMAK','BAHAR'],t:1,c:'genel'},
+{w:'BAHAR TEMİZLİĞİ',f:['EV','DÜZEN','TEMİZLİK','FERAH','BAHAR'],t:1,c:'genel'},
+{w:'İNCE CEKET',f:['GİYSİ','HAFİF','BAHAR','SERİN','GİYİNMEK'],t:1,c:'genel'},
+{w:'SABAH ÇİYİ',f:['DAMLA','ÇİM','SABAH','TAZE','SU'],t:1,c:'genel'},
+{w:'ÇİÇEK PAZARI',f:['SATIN ALMAK','RENKLİ','BAHAR','SOKAK','BİTKİ'],t:1,c:'genel'},
+{w:'BAHÇE ALETLERİ',f:['KÜREK','TIRMIK','TOPRAK','ÇALIŞMAK','EKİPMAN'],t:1,c:'genel'},
+{w:'ÇİM BİÇMEK',f:['KESMEK','BAHÇE','MAKİNE','ÇİM','BAHAR'],t:1,c:'genel'},
+{w:'SULAMA KABI',f:['SU','BİTKİ','DÖKMEK','BAHÇE','ALET'],t:1,c:'genel'},
+{w:'FISKİYE',f:['SU','DÖNDÜRMEK','ÇİM','BAHÇE','SULAMAK'],t:1,c:'genel'},
+{w:'TEMİZ HAVA',f:['NEFES','DIŞARI','BAHAR','FERAH','SERİN'],t:1,c:'genel'},
+{w:'BULUTLU HAVA',f:['GRİ','GÖKYÜZÜ','BAHAR','IŞIK','KAPALI'],t:1,c:'genel'},
+{w:'GÜNEŞLİ YAĞMUR',f:['AYNI ANDA','NADİR','IŞIK','SU','BAHAR'],t:1,c:'genel'},
+{w:'PARK BANKI',f:['OTURMAK','AHŞAP','DİNLENMEK','DIŞARI','BAHAR'],t:1,c:'genel'},
+{w:'DÖKÜLEN YAPRAKLAR',f:['ÇİÇEK','BAHAR','RENKLİ','DÜŞMEK','ZEMİN'],t:1,c:'genel'},
+{w:'YENİ FİLİZ',f:['BÜYÜME','BİTKİ','BAHAR','YEŞİL','TAZE'],t:1,c:'genel'},
+{w:'DOĞA KOKUSU',f:['TOPRAK','ÇİÇEK','BAHAR','KOKU','TEMİZ'],t:1,c:'genel'},
+{w:'AKAN DERE',f:['SU','HAREKET','BAHAR','DOĞA','HIZLI'],t:1,c:'genel'},
+{w:'YUMURTA ÇATLAMAK',f:['KUŞ','BEBEK','KABUK','BAHAR','ÇIKMAK'],t:1,c:'genel'},
+{w:'TARLADA EKİM',f:['ÇİFTÇİ','TOPRAK','ÜRÜN','BAHAR','BÜYÜME'],t:1,c:'genel'},
+{w:'SERA',f:['CAM','BİTKİ','SICAK','KONTROL','BÜYÜTMEK'],t:0,c:'genel'},
+{w:'BAHAR FESTİVALİ',f:['ETKİNLİK','ÇİÇEK','KUTLAMA','DIŞARI','SEZON'],t:1,c:'genel'},
+{w:'UÇURTMA UÇURMAK',f:['RÜZGAR','İP','GÖKYÜZÜ','BAHAR','UÇMAK'],t:1,c:'genel'},
+{w:'ALERJİ',f:['POLEN','HAPŞIRMAK','BAHAR','HAVA','REAKSİYON'],t:0,c:'genel'},
+{w:'YAĞMUR BOTU',f:['AYAKKABI','SU','BAHAR','ISLAK','YÜRÜMEK'],t:1,c:'genel'},
+{w:'ÇAMUR BİRİKİNTİSİ',f:['SU','TOPRAK','SIÇRAMAK','ZEMİN','BAHAR'],t:1,c:'genel'},
+{w:'GÜNEŞ ŞAPKASI',f:['BAŞ','KORUMAK','GÜNEŞ','BAHAR','GİYSİ'],t:1,c:'genel'},
+{w:'İNCE KAZAK',f:['HAFİF','GİYSİ','BAHAR','SERİN','SICAK'],t:1,c:'genel'},
+{w:'TAZE MEYVELER',f:['SULU','TATLI','PAZAR','BAHAR','YEMEK'],t:1,c:'genel'},
+{w:'ÇİLEK',f:['KIRMIZI','MEYVE','TATLI','BAHAR','TAZE'],t:0,c:'genel'},
+{w:'BAHAR SEBZELERİ',f:['YEŞİL','SAĞLIKLI','PAZAR','YEMEK','TAZE'],t:1,c:'genel'},
+{w:'ÇİFTÇİ PAZARI',f:['YEREL','ÜRÜN','TAZE','BAHAR','ALIŞVERİŞ'],t:1,c:'genel'},
+{w:'ÇİÇEK BUKETİ',f:['HEDİYE','SARILI','RENKLİ','VERMEK','ÇİÇEK'],t:1,c:'genel'},
+{w:'ÇİÇEKLENME DÖNEMİ',f:['YOĞUN','BAHAR','BİTKİ','ZAMAN','DOĞA'],t:1,c:'genel'},
+{w:'ILIK YAĞMUR',f:['HAFİF','SU','BAHAR','YUMUŞAK','DÜŞMEK'],t:1,c:'genel'},
+{w:'CAM SİLMEK',f:['TEMİZ','EV','BAHAR','PARLAK','PENCERE'],t:1,c:'genel'},
+{w:'PENCERE AÇMAK',f:['HAVA','FERAH','EV','BAHAR','ESİNTİ'],t:1,c:'genel'},
+{w:'KELEBEK BAHÇESİ',f:['BİTKİ','BÖCEK','RENKLİ','BAHAR','DOĞA'],t:1,c:'genel'},
+{w:'ŞEZLONG',f:['UZANMAK','PLAJ','GÜNEŞ','DİNLENMEK','SANDALYE'],t:1,c:'genel'},
+{w:'YÜZMEK',f:['SU','DENİZ','HAVUZ','SERİNLEMEK','HAREKET'],t:0,c:'genel'},
+{w:'TATİL KÖYÜ',f:['LÜKS','OTEL','HAVUZ','EĞLENCE','KONAKLAMA'],t:1,c:'genel'},
+{w:'AÇIK BÜFE',f:['YEMEK','ÇEŞİT','ALMAK','OTEL','SERVİS'],t:1,c:'genel'},
+{w:'KOKTEYL',f:['İÇECEK','BARDAK','YAZ','KARIŞIM','TATİL'],t:1,c:'genel'},
+{w:'TEKNE TURU',f:['DENİZ','GEZMEK','KAPTAN','SU','YOLCULUK'],t:1,c:'genel'},
+{w:'REHBER',f:['ANLATMAK','TUR','BİLGİ','GEZMEK','KİŞİ'],t:0,c:'genel'},
+{w:'HATIRA EŞYASI',f:['ANI','ALMAK','KÜÇÜK','HEDİYE','SAKLAMAK'],t:1,c:'genel'},
+{w:'ŞEHİR TURU',f:['GEZMEK','SOKAK','REHBER','KEŞİF','SEYAHAT'],t:1,c:'genel'},
+{w:'FOTOĞRAF ÇEKMEK',f:['KAMERA','ANI','GÖRÜNTÜ','KAYIT','TATİL'],t:1,c:'genel'},
+{w:'KAMP YAPMAK',f:['ÇADIR','DOĞA','ATEŞ','GECE','DIŞARI'],t:1,c:'genel'},
+{w:'YÜRÜYÜŞ YAPMAK',f:['YOL','DOĞA','KEŞİF','HAREKET','TATİL'],t:1,c:'genel'},
+{w:'HAVUZ',f:['SU','OTEL','YÜZMEK','DİNLENMEK','MAVİ'],t:0,c:'genel'},
+{w:'GÜNEŞ YANIĞI',f:['CİLT','KIRMIZI','ACI','GÜNEŞ','SICAK'],t:1,c:'genel'},
+{w:'RAHATLAMAK',f:['HUZUR','DİNLENMEK','TATİL','SAKİN','KEYİF'],t:1,c:'genel'},
+{w:'SEYAHAT SİGORTASI',f:['GÜVENLİK','PLAN','RİSK','KORUMA','TATİL'],t:1,c:'genel'},
+{w:'BİNİŞ KARTI',f:['UÇUŞ','KOLTUK','KAPI','HAVAALANI','BELGE'],t:1,c:'genel'},
+{w:'CHECK-İN',f:['GİRİŞ','KAYIT','OTEL','RESEPSİYON','ODA'],t:1,c:'genel'},
+{w:'CHECK-OUT',f:['ÇIKIŞ','ÖDEME','OTEL','AYRILMAK','KASA'],t:1,c:'genel'},
+{w:'HAVAALANI GÜVENLİĞİ',f:['KONTROL','BAGAJ','CİHAZ','TARAMA','UÇUŞ'],t:1,c:'genel'},
+{w:'DUTY FREE',f:['ALIŞVERİŞ','VERGİ','MAĞAZA','HAVAALANI','ÜRÜN'],t:1,c:'genel'},
+{w:'BAGAJ TESLİM',f:['VALİZ','BANT','ALMAK','HAVAALANI','BEKLEMEK'],t:1,c:'genel'},
+{w:'SEYAHAT YASTIĞI',f:['BOYUN','UÇAK','RAHAT','UYKU','YUMUŞAK'],t:1,c:'genel'},
+{w:'KORİDOR KOLTUK',f:['UÇAK','GEÇİŞ','YER','RAHAT','KOLTUK'],t:1,c:'genel'},
+{w:'UÇUŞ GECİKMESİ',f:['BEKLEMEK','SAAT','SORUN','HAVAALANI','GEÇ'],t:1,c:'genel'},
+{w:'SEYAHAT PLANI',f:['PROGRAM','ROTA','GÜN','LİSTE','TATİL'],t:1,c:'genel'},
+{w:'HARİTA KULLANMAK',f:['YÖN','BULMAK','YOL','ŞEHİR','GEZMEK'],t:1,c:'genel'},
+{w:'YOLCULUK',f:['GİTMEK','MESAFE','ARAÇ','SEYAHAT','ZAMAN'],t:1,c:'genel'},
+{w:'BENZİN İSTASYONU',f:['YAKIT','ARABA','DURMAK','YOL','DOLDURMAK'],t:1,c:'genel'},
+{w:'ARAÇ KİRALAMA',f:['ARABA','KİRALAMAK','SEYAHAT','SÜRMEK','HİZMET'],t:1,c:'genel'},
+{w:'OTEL LOBİSİ',f:['GİRİŞ','BEKLEMEK','RESEPSİYON','OTURMAK','ALAN'],t:1,c:'genel'},
+{w:'ODA SERVİSİ',f:['YEMEK','SİPARİŞ','OTEL','GETİRMEK','ODA'],t:1,c:'genel'},
+{w:'MİNİ BAR',f:['İÇECEK','ATIŞTIRMALIK','OTEL','DOLAP','ODA'],t:1,c:'genel'},
+{w:'BALKON MANZARASI',f:['DIŞARI','OTEL','GÖRMEK','ŞEHİR','DENİZ'],t:1,c:'genel'},
+{w:'DENİZ MANZARASI',f:['SU','MAVİ','PENCERE','OTEL','GÖRÜNÜM'],t:1,c:'genel'},
+{w:'HAVUZ BARI',f:['İÇECEK','SU','TATİL','RAHAT','YAZ'],t:1,c:'genel'},
+{w:'MASAJ',f:['VÜCUT','RAHATLAMAK','BASKI','TERAPİ','SPA'],t:0,c:'genel'},
+{w:'SAUNA',f:['SICAK','TERLEMEK','ODA','SPA','RAHAT'],t:0,c:'genel'},
+{w:'BUHAR ODASI',f:['NEM','SICAK','SPA','HAVA','RAHAT'],t:1,c:'genel'},
+{w:'PLAJ ŞEMSİYESİ',f:['GÖLGE','GÜNEŞ','KUM','KORUMA','PLAJ'],t:1,c:'genel'},
+{w:'PLAJ HAVLUSU',f:['KURULAMAK','SU','BÜYÜK','KUMAŞ','PLAJ'],t:1,c:'genel'},
+{w:'ŞNORKEL',f:['MASKE','SU','DENİZ','BALIK','KEŞİF'],t:1,c:'genel'},
+{w:'DALIŞ',f:['DERİN','DENİZ','OKSİJEN','KEŞİF','SU ALTI'],t:0,c:'genel'},
+{w:'SÖRF',f:['DALGA','TAHTA','DENİZ','SPOR','KAYMAK'],t:0,c:'genel'},
+{w:'JET SKİ',f:['SU','HIZ','MOTOR','DENİZ','SÜRMEK'],t:0,c:'genel'},
+{w:'PARASAİLİNG',f:['PARAŞÜT','DENİZ','UÇMAK','İP','EĞLENCE'],t:1,c:'genel'},
+{w:'GEMİ TURU',f:['BÜYÜK','DENİZ','YOLCULUK','RAHAT','GEZİ'],t:1,c:'genel'},
+{w:'YAT PARTİSİ',f:['LÜKS','MÜZİK','DENİZ','EĞLENCE','TEKNE'],t:1,c:'genel'},
+{w:'ADA GEZİSİ',f:['FARKLI','YER','TEKNE','KEŞİF','TATİL'],t:1,c:'genel'},
+{w:'YEREL YEMEK',f:['TAT','KÜLTÜR','RESTORAN','YEMEK','DENEMEK'],t:1,c:'genel'},
+{w:'SOKAK YEMEĞİ',f:['HIZLI','UCUZ','YEREL','YEMEK','SOKAK'],t:1,c:'genel'},
+{w:'RESTORAN REZERVASYONU',f:['MASA','AKŞAM','YER','AYIRMAK','YEMEK'],t:1,c:'genel'},
+{w:'LÜKS RESTORAN',f:['PAHALI','YEMEK','ŞIK','SERVİS','DENEYİM'],t:1,c:'genel'},
+{w:'KAFE MOLASI',f:['KAHVE','OTURMAK','KISA','DİNLENMEK','İÇMEK'],t:1,c:'genel'},
+{w:'SEYAHAT BLOGU',f:['YAZMAK','PAYLAŞMAK','GEZİ','İNTERNET','İÇERİK'],t:1,c:'genel'},
+{w:'SEYAHAT VİDEOSU',f:['KAYIT','PAYLAŞMAK','VİDEO','TATİL','İZLEMEK'],t:1,c:'genel'},
+{w:'GÜN DOĞUMU',f:['SABAH','IŞIK','ERKEN','GÖKYÜZÜ','MANZARA'],t:1,c:'genel'},
+{w:'GÜN BATIMI',f:['AKŞAM','TURUNCU','UFUK','GÜNEŞ','MANZARA'],t:1,c:'genel'},
+{w:'GECE PAZARI',f:['ALIŞVERİŞ','IŞIK','YEMEK','SOKAK','AKŞAM'],t:1,c:'genel'},
+{w:'FESTİVAL GEZİSİ',f:['ETKİNLİK','KÜLTÜR','KUTLAMA','TATİL','YER'],t:1,c:'genel'},
+{w:'GECE SOHBETİ',f:['KONUŞMAK','DERİN','ÇİFT','DUYGU','SESSİZ'],t:1,c:'genel'},
+{w:'ROMANTİK FİLM',f:['İZLEMEK','AŞK','SAHNE','ÇİFT','HİKAYE'],t:1,c:'genel'},
+{w:'AYNI BATTANİYE',f:['SICAK','SARILMAK','ÇİFT','KOLTUK','RAHAT'],t:1,c:'genel'},
+{w:'GECE ÖPÜCÜĞÜ',f:['DUDAK','AŞK','ROMANTİK','AN','YAKIN'],t:1,c:'genel'},
+{w:'YAVAŞ DANS',f:['MÜZİK','HAREKET','ÇİFT','RİTİM','YAKIN'],t:1,c:'genel'},
+{w:'DUYGUSAL KONUŞMA',f:['AÇIK','HİS','ÇİFT','SAMİMİ','DERİN'],t:1,c:'genel'},
+{w:'AŞK İTİRAFI',f:['SÖYLEMEK','DUYGU','GERÇEK','ROMANTİK','AÇIKLAMAK'],t:1,c:'genel'},
+{w:'FLÖRT MESAJI',f:['YAZMAK','TELEFON','ÇİFT','EĞLENCE','SOHBET'],t:1,c:'genel'},
+{w:'GECE MESAJLAŞMASI',f:['TELEFON','YAZMAK','ÇİFT','GEÇ','SOHBET'],t:1,c:'genel'},
+{w:'SESLİ KONUŞMA',f:['TELEFON','SES','ÇİFT','GECE','KONUŞMAK'],t:1,c:'genel'},
+{w:'SÜRPRİZ ZİYARET',f:['BEKLENMEDİK','KAPI','GECE','ÇİFT','GELMEK'],t:1,c:'genel'},
+{w:'GECE YÜRÜYÜŞÜ',f:['SOKAK','SESSİZ','ÇİFT','YÜRÜMEK','KARANLIK'],t:1,c:'genel'},
+{w:'YILDIZ İZLEMEK',f:['GÖKYÜZÜ','ROMANTİK','GECE','ÇİFT','BAKMAK'],t:1,c:'genel'},
+{w:'MÜZİK DİNLEMEK',f:['ŞARKI','ÇİFT','RAHAT','PAYLAŞMAK','GECE'],t:1,c:'genel'},
+{w:'ORTAK PLAYLİST',f:['MÜZİK','ŞARKILAR','ÇİFT','DİNLEMEK','ZEVK'],t:1,c:'genel'},
+{w:'İÇ ŞAKALAR',f:['GÜLMEK','ÇİFT','ANI','ÖZEL','KOMİK'],t:1,c:'genel'},
+{w:'TATLI ATIŞMA',f:['ŞAKA','ÇİFT','EĞLENCE','GÜLMEK','HAFİF'],t:1,c:'genel'},
+{w:'SEVGİ LAKABI',f:['İSİM','TATLI','ÇİFT','HİTAP','ÖZEL'],t:1,c:'genel'},
+{w:'SARILMAK',f:['YAKIN','SICAK','ÇİFT','HUZUR','TEMAS'],t:1,c:'genel'},
+{w:'OMZUNA YASLANMAK',f:['DİNLENMEK','ÇİFT','RAHAT','YAKIN','SAKİN'],t:1,c:'genel'},
+{w:'SAÇLA OYNAMAK',f:['DOKUNMAK','NAZİK','ÇİFT','RAHAT','SEVGİ'],t:1,c:'genel'},
+{w:'ARKADAN SARILMAK',f:['SÜRPRİZ','ÇİFT','YAKIN','SICAK','TEMAS'],t:1,c:'genel'},
+{w:'ALINDAN ÖPMEK',f:['NAZİK','SEVGİ','ÇİFT','YUMUŞAK','AN'],t:1,c:'genel'},
+{w:'KOLTUKTA SARILMAK',f:['OTURMAK','YAKIN','ÇİFT','RAHAT','SICAK'],t:1,c:'genel'},
+{w:'FİLM ATIŞTIRMASI',f:['PATLAMIŞ MISIR','YEMEK','ÇİFT','İZLEMEK','PAYLAŞMAK'],t:1,c:'genel'},
+{w:'BİRBİRİNE YEDİRMEK',f:['YEMEK','OYUN','ÇİFT','EĞLENCE','YAKIN'],t:1,c:'genel'},
+{w:'BİRLİKTE GÜLMEK',f:['MUTLULUK','ÇİFT','KOMİK','AN','PAYLAŞMAK'],t:1,c:'genel'},
+{w:'GİZLİ GÜLÜMSEME',f:['BAKIŞ','ÇİFT','SESSİZ','BAĞ','AN'],t:1,c:'genel'},
+{w:'SESSİZ ANLAŞMAK',f:['KONUŞMADAN','ÇİFT','BAĞ','DERİN','ANLAMAK'],t:1,c:'genel'},
+{w:'YAĞMUR İZLEMEK',f:['PENCERE','DAMLA','ÇİFT','HUZUR','GECE'],t:1,c:'genel'},
+{w:'GELECEK PLANI',f:['HAYAL','ÇİFT','KONUŞMAK','UMUT','BİRLİKTE'],t:1,c:'genel'},
+{w:'TATİL PLANLAMAK',f:['SEYAHAT','ÇİFT','PLAN','YER','KONUŞMAK'],t:1,c:'genel'},
+{w:'SESSİZ HUZUR',f:['SAKİN','ÇİFT','YAN YANA','KONUŞMADAN','RAHAT'],t:1,c:'genel'},
+{w:'GÖZLERİNİ İZLEMEK',f:['BAKIŞ','ÇİFT','YOĞUN','SESSİZ','BAĞ'],t:1,c:'genel'},
+{w:'GECE ÇAYI',f:['İÇECEK','SICAK','ÇİFT','RAHAT','GECE'],t:1,c:'genel'},
+{w:'GECE KAHVESİ',f:['UYANIK','İÇMEK','ÇİFT','SOHBET','ENERJİ'],t:1,c:'genel'},
+{w:'GECE TATLISI',f:['YEMEK','TATLI','PAYLAŞMAK','ÇİFT','GECE'],t:1,c:'genel'},
+{w:'MUTFAKTA DANS',f:['MÜZİK','HAREKET','ÇİFT','EĞLENCE','EV'],t:1,c:'genel'},
+{w:'BALKON SOHBETİ',f:['DIŞARI','GECE','ÇİFT','ŞEHİR','KONUŞMAK'],t:1,c:'genel'},
+{w:'KAPÜŞON PAYLAŞMAK',f:['GİYSİ','SICAK','ÇİFT','TATLI','YAKIN'],t:1,c:'genel'},
+{w:'SELFİE ÇEKMEK',f:['FOTOĞRAF','TELEFON','ÇİFT','ANI','GÜLMEK'],t:1,c:'genel'},
+{w:'FOTOĞRAFLARA BAKMAK',f:['GEÇMİŞ','ANI','ÇİFT','TELEFON','HATIRLAMAK'],t:1,c:'genel'},
+{w:'BİRLİKTE UYUMAK',f:['YATAK','ÇİFT','RAHAT','GECE','HUZUR'],t:1,c:'genel'},
+{w:'UYKULU GÜLÜMSEME',f:['YORGUN','ÇİFT','TATLI','YÜZ','HUZUR'],t:1,c:'genel'},
+{w:'GECE KAHKAHASI',f:['GÜLMEK','ÇİFT','EĞLENCE','YÜKSEK','AN'],t:1,c:'genel'},
+{w:'ŞAKALAŞMAK',f:['EĞLENCE','ÇİFT','KONUŞMAK','GÜLMEK','HAFİF'],t:1,c:'genel'},
+{w:'BARIŞMAK',f:['ÖZÜR','ÇİFT','SARILMAK','DÜZELTMEK','SEVGİ'],t:1,c:'genel'},
+{w:'DUYGUSAL DESTEK',f:['YARDIM','ÇİFT','HİS','RAHATLATMAK','DESTEK'],t:1,c:'genel'},
+{w:'DURUM SORMAK',f:['İYİ MİSİN','ÇİFT','İLGİ','MESAJ','KONUŞMAK'],t:1,c:'genel'},
+{w:'ÖZLEDİM MESAJI',f:['YAZMAK','ÇİFT','DUYGU','UZAK','GECE'],t:1,c:'genel'},
+{w:'RASTGELE İLTİFAT',f:['GÜZEL','ÇİFT','SÖYLEMEK','TATLI','MUTLU'],t:1,c:'genel'},
+{w:'UTANGAÇ GÜLÜMSEME',f:['ÇEKİNGEN','ÇİFT','TATLI','YÜZ','AN'],t:1,c:'genel'},
+{w:'HAFİF İTMEK',f:['ŞAKA','ÇİFT','EĞLENCE','DOKUNMAK','OYUN'],t:1,c:'genel'},
+{w:'YASTIK SAVAŞI',f:['EĞLENCE','ÇİFT','YATAK','GÜLMEK','OYUN'],t:1,c:'genel'},
+{w:'YATAK SOHBETİ',f:['SESSİZ','ÇİFT','KONUŞMAK','GECE','RAHAT'],t:1,c:'genel'},
+{w:'KULAĞA FISILDAMAK',f:['YAKIN','SES','ÇİFT','GİZLİ','NAZİK'],t:1,c:'genel'},
+{w:'TARKAN',f:['ŞARKICI','POP','TÜRKİYE','KONSER','MÜZİK'],t:0,c:'genel'},
+{w:'SEZEN AKSU',f:['ŞARKICI','BESTECİ','TÜRK','ŞARKI','EFSANE'],t:1,c:'genel'},
+{w:'MURAT BOZ',f:['ŞARKICI','POP','JÜRİ','TÜRKİYE','MÜZİK'],t:1,c:'genel'},
+{w:'HADİSE',f:['ŞARKICI','POP','SAHNE','JÜRİ','YARIŞMA'],t:0,c:'genel'},
+{w:'ALEYNA TİLKİ',f:['GENÇ','ŞARKICI','POP','TÜRKİYE','ÇIKIŞ'],t:1,c:'genel'},
+{w:'EDİS',f:['ŞARKICI','DANS','POP','SAHNE','TÜRKİYE'],t:0,c:'genel'},
+{w:'GÜLŞEN',f:['ŞARKICI','POP','STİL','SAHNE','TÜRKİYE'],t:0,c:'genel'},
+{w:'KENAN DOĞULU',f:['ŞARKICI','POP','SAHNE','TÜRKİYE','MÜZİK'],t:1,c:'genel'},
+{w:'İBRAHİM TATLISES',f:['ŞARKICI','ARABESK','TÜRKİYE','TÜRKÜ','SAHNE'],t:1,c:'genel'},
+{w:'AJDA PEKKAN',f:['DİVA','POP','TÜRKİYE','SAHNE','EFSANE'],t:1,c:'genel'},
+{w:'CEM YILMAZ',f:['KOMEDYEN','STAND UP','FİLM','TÜRKİYE','MİZAH'],t:1,c:'genel'},
+{w:'ATA DEMİRER',f:['KOMEDYEN','OYUNCU','FİLM','TÜRKİYE','MİZAH'],t:1,c:'genel'},
+{w:'ŞAHAN GÖKBAKAR',f:['KOMEDYEN','FİLM','RECEP','MİZAH','TÜRKİYE'],t:1,c:'genel'},
+{w:'BEYAZIT ÖZTÜRK',f:['SUNUCU','TV','TALK SHOW','TÜRKİYE','EĞLENCE'],t:1,c:'genel'},
+{w:'ACUN ILICALI',f:['YAPIMCI','TV','YARIŞMA','MEDYA','TÜRKİYE'],t:1,c:'genel'},
+{w:'KIVANÇ TATLITUĞ',f:['OYUNCU','DİZİ','MODEL','TÜRKİYE','YAKIŞIKLI'],t:1,c:'genel'},
+{w:'ÇAĞATAY ULUSOY',f:['OYUNCU','DİZİ','NETFLİX','TÜRKİYE','GENÇ'],t:1,c:'genel'},
+{w:'BURAK ÖZÇİVİT',f:['OYUNCU','DİZİ','OSMANLI','TÜRKİYE','TARİH'],t:1,c:'genel'},
+{w:'ENGİN AKYÜREK',f:['OYUNCU','DİZİ','TÜRKİYE','DRAM','ROL'],t:1,c:'genel'},
+{w:'HALİT ERGENÇ',f:['OYUNCU','DİZİ','TARİH','OSMANLI','TÜRKİYE'],t:1,c:'genel'},
+{w:'CAN YAMAN',f:['OYUNCU','DİZİ','İTALYA','TÜRKİYE','POPÜLER'],t:1,c:'genel'},
+{w:'KEREM BÜRSİN',f:['OYUNCU','DİZİ','ROMANTİK','TÜRKİYE','ROL'],t:1,c:'genel'},
+{w:'DEMET ÖZDEMİR',f:['OYUNCU','DİZİ','ROMANTİK','TÜRKİYE','KADIN'],t:1,c:'genel'},
+{w:'HANDE ERÇEL',f:['OYUNCU','DİZİ','MODEL','TÜRKİYE','GÜZEL'],t:1,c:'genel'},
+{w:'LEONARDO DİCAPRİO',f:['OYUNCU','FİLM','OSCAR','TİTANİC','HOLLYWOOD'],t:1,c:'genel'},
+{w:'BRAD PİTT',f:['OYUNCU','FİLM','HOLLYWOOD','FİGHT CLUB','YILDIZ'],t:1,c:'genel'},
+{w:'ANGELİNA JOLİE',f:['OYUNCU','FİLM','HOLLYWOOD','YARDIM','ÜNLÜ'],t:1,c:'genel'},
+{w:'SCARLETT JOHANSSON',f:['OYUNCU','MARVEL','FİLM','KADIN','YILDIZ'],t:1,c:'genel'},
+{w:'CHRİS HEMSWORTH',f:['OYUNCU','THOR','MARVEL','KASLI','FİLM'],t:1,c:'genel'},
+{w:'TOM HOLLAND',f:['OYUNCU','SPİDER MAN','MARVEL','GENÇ','FİLM'],t:1,c:'genel'},
+{w:'ZENDAYA',f:['OYUNCU','MODA','DİZİ','GENÇ','HOLLYWOOD'],t:1,c:'genel'},
+{w:'JENNİFER LAWRENCE',f:['OYUNCU','FİLM','OSCAR','AÇLIK OYUNLARI','YILDIZ'],t:1,c:'genel'},
+{w:'EMMA WATSON',f:['OYUNCU','HARRY POTTER','KİTAP','İNGİLTERE','ÜNLÜ'],t:1,c:'genel'},
+{w:'CRİSTİANO RONALDO',f:['FUTBOL','GOL','PORTEKİZ','YILDIZ','FORVET'],t:1,c:'genel'},
+{w:'LİONEL MESSİ',f:['FUTBOL','ARJANTİN','DÜNYA KUPASI','BARCELONA','YILDIZ'],t:1,c:'genel'},
+{w:'NEYMAR',f:['FUTBOL','BREZİLYA','PSG','ÇALIM','YILDIZ'],t:0,c:'genel'},
+{w:'KYLİAN MBAPPE',f:['FUTBOL','HIZ','FRANSA','GOL','PSG'],t:1,c:'genel'},
+{w:'ERLİNG HAALAND',f:['FUTBOL','GOL','NORVEÇ','FORVET','GÜÇLÜ'],t:1,c:'genel'},
+{w:'MOHAMED SALAH',f:['FUTBOL','LİVERPOOL','HIZ','MISIR','GOL'],t:1,c:'genel'},
+{w:'LEBRON JAMES',f:['BASKETBOL','NBA','SAYI','LAKERS','YILDIZ'],t:1,c:'genel'},
+{w:'MİCHAEL JORDAN',f:['BASKETBOL','NBA','EFSANE','CHİCAGO','MARKA'],t:1,c:'genel'},
+{w:'KOBE BRYANT',f:['BASKETBOL','NBA','LAKERS','EFSANE','SAYI'],t:1,c:'genel'},
+{w:'STEPHEN CURRY',f:['BASKETBOL','NBA','ÜÇLÜK','WARRİORS','YILDIZ'],t:1,c:'genel'},
+{w:'ELON MUSK',f:['GİRİŞİMCİ','TESLA','SPACEX','TEKNOLOJİ','MİLYARDER'],t:1,c:'genel'},
+{w:'MARK ZUCKERBERG',f:['FACEBOOK','TEKNOLOJİ','CEO','SOSYAL MEDYA','KURUCU'],t:1,c:'genel'},
+{w:'JEFF BEZOS',f:['AMAZON','MİLYARDER','ŞİRKET','KURUCU','İŞ'],t:1,c:'genel'},
+{w:'BİLL GATES',f:['MİCROSOFT','TEKNOLOJİ','MİLYARDER','YAZILIM','BAĞIŞ'],t:1,c:'genel'},
+{w:'STEVE JOBS',f:['APPLE','İPHONE','TEKNOLOJİ','KURUCU','İNOVASYON'],t:1,c:'genel'},
+{w:'MRBEAST',f:['YOUTUBE','VİDEO','BAĞIŞ','İÇERİK','VİRAL'],t:1,c:'genel'},
+{w:'PEWDİEPİE',f:['YOUTUBE','OYUN','İÇERİK','ABONE','İSVEÇ'],t:1,c:'genel'},
+{w:'LOGAN PAUL',f:['YOUTUBE','BOKS','İÇERİK','SOSYAL','ÜNLÜ'],t:1,c:'genel'},
+{w:'CHARLİ DAMELİO',f:['TİKTOK','DANS','VİDEO','GENÇ','ÜNLÜ'],t:1,c:'genel'},
+{w:'ADDİSON RAE',f:['TİKTOK','İNFLUENCER','DANS','SOSYAL','ÜNLÜ'],t:1,c:'genel'},
+{w:'HÜCRE',f:['CANLI','YAPI','ÇEKİRDEK','ZAR','ORGANİZMA'],t:0,c:'genel'},
+{w:'GALAKSİ',f:['YILDIZ','UZAY','EVREN','SİSTEM','SAMANYOLU'],t:1,c:'genel'},
+{w:'KARA DELİK',f:['ÇEKİM','IŞIK','UZAY','SONSUZ','YOĞUNLUK'],t:1,c:'genel'},
+{w:'GEZEGEN',f:['YÖRÜNGE','UZAY','KÜRE','DÜNYA','SİSTEM'],t:1,c:'genel'},
+{w:'DÜNYA',f:['GEZEGEN','İNSAN','SU','KARA','YAŞAM'],t:0,c:'genel'},
+{w:'KITA',f:['KARA','DÜNYA','BÖLGE','HARİTA','COĞRAFYA'],t:0,c:'genel'},
+{w:'OKYANUS',f:['SU','DERİN','DALGA','MAVİ','DENİZ'],t:1,c:'genel'},
+{w:'İKLİM',f:['HAVA','SICAKLIK','UZUN','DEĞİŞİM','ÇEVRE'],t:0,c:'genel'},
+{w:'BİYOÇEŞİTLİLİK',f:['TÜR','ÇEŞİT','DOĞA','CANLI','EKOSİSTEM'],t:1,c:'genel'},
+{w:'ELEKTRİK',f:['ENERJİ','AKIM','GÜÇ','KABLO','IŞIK'],t:1,c:'genel'},
+{w:'MIKNATIS',f:['ÇEKMEK','KUTUP','METAL','KUVVET','FİZİK'],t:1,c:'genel'},
+{w:'VOLTAJ',f:['ELEKTRİK','ENERJİ','AKIM','GÜÇ','DEĞER'],t:0,c:'genel'},
+{w:'DEVRE',f:['ELEKTRİK','YOL','KABLO','SİSTEM','AKIM'],t:0,c:'genel'},
+{w:'IŞIK',f:['ENERJİ','PARLAK','GÖRMEK','DALGA','FİZİK'],t:0,c:'genel'},
+{w:'BASINÇ',f:['KUVVET','ALAN','GAZ','ÖLÇÜ','FİZİK'],t:0,c:'genel'},
+{w:'ANTİK MISIR',f:['PİRAMİT','NİL','FİRAVUN','TARİH','MEDENİYET'],t:1,c:'genel'},
+{w:'ROMA İMPARATORLUĞU',f:['ROMA','TARİH','GÜÇ','ESKİ','DEVLET'],t:1,c:'genel'},
+{w:'ORTA ÇAĞ',f:['ŞÖVALYE','KALE','TARİH','DÖNEM','AVRUPA'],t:1,c:'genel'},
+{w:'SANAYİ DEVRİMİ',f:['MAKİNE','ÜRETİM','FABRİKA','DEĞİŞİM','TARİH'],t:1,c:'genel'},
+{w:'SOĞUK SAVAŞ',f:['ABD','SSCB','GERİLİM','SİYASET','TARİH'],t:1,c:'genel'},
+{w:'ENFLASYON',f:['FİYAT','ARTIŞ','EKONOMİ','PARA','DEĞER'],t:1,c:'genel'},
+{w:'TALEP',f:['İHTİYAÇ','ALMAK','PİYASA','EKONOMİ','İSTEK'],t:0,c:'genel'},
+{w:'TİCARET',f:['ALIŞVERİŞ','ÜRÜN','ÜLKELER','EKONOMİ','DEĞİŞİM'],t:1,c:'genel'},
+{w:'PARA BİRİMİ',f:['DEĞER','BANKNOT','EKONOMİ','PARA','SİSTEM'],t:1,c:'genel'},
+{w:'BANKA',f:['HESAP','PARA','FİNANS','YATIRMAK','ÇEKMEK'],t:0,c:'genel'},
+{w:'VERGİ',f:['DEVLET','ÖDEME','GELİR','SİSTEM','PARA'],t:0,c:'genel'},
+{w:'ALFABE',f:['HARF','YAZI','DİL','SİSTEM','SEMBOL'],t:0,c:'genel'},
+{w:'DİL BİLGİSİ',f:['KURAL','CÜMLE','DOĞRU','YAPI','DİL'],t:1,c:'genel'},
+{w:'ÇEVİRİ',f:['DİL','ANLAM','DÖNÜŞTÜRMEK','KELİME','METİN'],t:0,c:'genel'},
+{w:'İLETİŞİM',f:['KONUŞMAK','MESAJ','PAYLAŞMAK','BİLGİ','İNSANLAR'],t:1,c:'genel'},
+{w:'KÜLTÜR',f:['GELENEK','TOPLUM','YAŞAM','ALIŞKANLIK','DEĞER'],t:0,c:'genel'},
+{w:'FELSEFE',f:['DÜŞÜNCE','ANLAM','HAYAT','MANTIK','FİKİR'],t:1,c:'genel'},
+{w:'SOSYOLOJİ',f:['TOPLUM','GRUP','İNSAN','DAVRANIŞ','İNCELEME'],t:1,c:'genel'},
+{w:'WEB SİTESİ',f:['SAYFA','İNTERNET','İÇERİK','TARAYICI','SİTE'],t:1,c:'genel'},
+{w:'ARAMA MOTORU',f:['GOOGLE','BULMAK','SONUÇ','İNTERNET','ARAMAK'],t:1,c:'genel'},
+{w:'SOSYAL MEDYA',f:['PAYLAŞIM','UYGULAMA','İÇERİK','İNSANLAR','ONLİNE'],t:1,c:'genel'},
+{w:'YAZILIM',f:['PROGRAM','KOD','BİLGİSAYAR','UYGULAMA','SİSTEM'],t:1,c:'genel'},
+{w:'DONANIM',f:['FİZİKSEL','CİHAZ','PARÇA','MAKİNE','BİLGİSAYAR'],t:1,c:'genel'},
+{w:'YAPAY ZEKA',f:['ÖĞRENMEK','VERİ','SİSTEM','AKILLI','TEKNOLOJİ'],t:1,c:'genel'},
+{w:'VERİ',f:['BİLGİ','ANALİZ','SAYI','DEPOLAMA','GERÇEK'],t:0,c:'genel'},
+{w:'YENİLİK',f:['YENİ','FİKİR','GELİŞME','TEKNOLOJİ','İLERLEME'],t:1,c:'genel'},
+{w:'KEŞİF',f:['BULMAK','YENİ','BİLİM','ARAŞTIRMA','BİLGİ'],t:0,c:'genel'},
+{w:'TEORİ',f:['AÇIKLAMA','FİKİR','MODEL','BİLİM','KAVRAM'],t:0,c:'genel'},
+{w:'ÖLÇÜM',f:['DEĞER','BİRİM','HESAPLAMAK','SAYI','SONUÇ'],t:0,c:'genel'},
+{w:'ZAMAN',f:['SAAT','SANİYE','ÖLÇÜ','SÜRE','AKIŞ'],t:0,c:'genel'},
+{w:'MESAFE',f:['UZUNLUK','ÖLÇÜ','UZAKLIK','ALAN','BİRİM'],t:0,c:'genel'},
+{w:'ENERJİ',f:['GÜÇ','İŞ','HAREKET','FİZİK','KUVVET'],t:0,c:'genel'},
+{w:'KÜTLE',f:['AĞIRLIK','MADDE','ÖLÇÜ','FİZİK','DEĞER'],t:0,c:'genel'},
+];
+
+const CAT_NAMES = {genel:'GENEL',kültür:'TARİH & KÜLTÜR',bilim:'BİLİM & DOĞA',yemek:'YEMEK',hayvan:'HAYVANLAR',spor:'SPOR',sanat:'SANAT',teknoloji:'TEKNOLOJİ',ev:'EV & YAŞAM'};
+
+/* ---------- State ---------- */
+const settings = { difficulty:'1', category:'all', time:60, passes:3, target:30 };
+let teams = [{name:'Takım 1',score:0},{name:'Takım 2',score:0}];
+let currentTeam = 0;
+let passesLeft = 3;
+let timerId = null, timeLeft = 60, turnActive = false;
+let deck = [], deckIdx = 0;
+let turnCorrect = 0, totalCorrect = 0, totalBuzz = 0, totalPass = 0;
+const CIRC = 2 * Math.PI * 56;
+
+const $ = id => document.getElementById(id);
+const screens = {menu:$('screen-menu'), game:$('screen-game'), inter:$('screen-inter'), over:$('screen-over')};
+function show(name){ Object.values(screens).forEach(s=>s.classList.add('hidden')); screens[name].classList.remove('hidden'); }
+
+/* ---------- Audio (Web Audio API) ---------- */
+let actx = null;
+function ac(){ if(!actx) actx = new (window.AudioContext||window.webkitAudioContext)(); return actx; }
+function tone(freq, dur, type='sine', gain=0.18, delay=0){
+  try{
+    const a=ac(), o=a.createOscillator(), g=a.createGain();
+    o.type=type; o.frequency.value=freq;
+    const t=a.currentTime+delay;
+    g.gain.setValueAtTime(0.0001,t);
+    g.gain.exponentialRampToValueAtTime(gain,t+0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+    o.connect(g); g.connect(a.destination);
+    o.start(t); o.stop(t+dur+0.02);
+  }catch(e){}
+}
+const sfx = {
+  correct(){ tone(660,.14,'triangle',.2,0); tone(990,.22,'triangle',.2,.11); },
+  buzz(){ tone(140,.38,'sawtooth',.3,0); tone(110,.3,'square',.18,.06); },
+  pass(){ tone(440,.09,'sine',.15,0); },
+  tick(){ tone(1200,.05,'square',.07,0); },
+  start(){ tone(392,.12,'triangle',.2,0); tone(523,.12,'triangle',.2,.1); tone(659,.2,'triangle',.2,.2); },
+  win(){ [523,659,784,1047].forEach((f,i)=>tone(f,.24,'triangle',.22,i*.16)); }
+};
+function vibrate(p){ try{ navigator.vibrate && navigator.vibrate(p); }catch(e){} }
+
+/* ---------- Menu wiring ---------- */
+function wireChips(containerId, attr, cb){
+  const el = $(containerId);
+  el.addEventListener('click', e=>{
+    const btn = e.target.closest('.chip'); if(!btn) return;
+    el.querySelectorAll('.chip').forEach(c=>c.classList.remove('on'));
+    btn.classList.add('on'); cb(btn.dataset[attr]);
+  });
+}
+wireChips('difficultyChips','d', v=>settings.difficulty=v);
+wireChips('categoryChips','c', v=>settings.category=v);
+document.querySelectorAll('[data-time]').forEach(b=>b.addEventListener('click',()=>{settings.time=+b.dataset.time;document.querySelectorAll('[data-time]').forEach(x=>x.classList.toggle('on',x===b));}));
+document.querySelectorAll('[data-pass]').forEach(b=>b.addEventListener('click',()=>{settings.passes=+b.dataset.pass;document.querySelectorAll('[data-pass]').forEach(x=>x.classList.toggle('on',x===b));}));
+document.querySelectorAll('[data-target]').forEach(b=>b.addEventListener('click',()=>{settings.target=+b.dataset.target;document.querySelectorAll('[data-target]').forEach(x=>x.classList.toggle('on',x===b));}));
+
+$('rulesBtn').addEventListener('click',()=>{ $('rulesModal').classList.remove('hidden'); });
+$('closeRules').addEventListener('click',()=>{ $('rulesModal').classList.add('hidden'); });
+
+/* menu stats from localStorage */
+function loadStats(){ try{ return JSON.parse(localStorage.getItem('tabu_stats')||'{"games":0,"correct":0,"buzz":0}'); }catch(e){ return {games:0,correct:0,buzz:0}; } }
+function saveStats(s){ try{ localStorage.setItem('tabu_stats',JSON.stringify(s)); }catch(e){} }
+function renderMenuStats(){ const s=loadStats(); $('menuStats').textContent = (s.games>0 ? s.games + ' oyun · ' + s.correct + ' doğru' : 'İlk oyunun olsun!') + ' · ' + WORDS.length + ' kart'; }
+renderMenuStats();
+
+/* ---------- Deck ---------- */
+function buildDeck(){
+  let pool = WORDS.filter(w=>{
+    const dOk = settings.difficulty==='all' || w.t === +settings.difficulty;
+    const cOk = settings.category==='all' || w.c === settings.category;
+    return dOk && cOk;
+  });
+  if(pool.length === 0) pool = WORDS.slice(); // fallback
+  const d = pool.slice();
+  for(let i=d.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [d[i],d[j]]=[d[j],d[i]]; }
+  return d;
+}
+function nextCard(){
+  if(deckIdx >= deck.length){ deck = buildDeck(); deckIdx = 0; }
+  return deck[deckIdx++];
+}
+function renderCard(card){
+  $('cardCat').textContent = CAT_NAMES[card.c] || 'GENEL';
+  $('targetWord').textContent = card.w;
+  const ul = $('forbidList'); ul.innerHTML = '';
+  card.f.slice(0,5).forEach(w=>{
+    const li=document.createElement('li');
+    li.innerHTML='<span class="fx">✕</span><span></span>';
+    li.querySelector('span:last-child').textContent = w;
+    ul.appendChild(li);
+  });
+  const el=$('gameCard');
+  el.classList.remove('card'); void el.offsetWidth; el.classList.add('card');
+}
+
+/* ---------- Timer ---------- */
+function renderTimer(){
+  const num=$('timerNum');
+  num.innerHTML = timeLeft + '<small>SANİYE</small>';
+  const off = CIRC * (1 - timeLeft/settings.time);
+  const ring=$('ringFg');
+  ring.style.strokeDashoffset = off;
+  const low = timeLeft<=10;
+  ring.classList.toggle('low',low);
+  num.classList.toggle('low',low);
+}
+function startTimer(){
+  clearInterval(timerId);
+  timeLeft = settings.time; renderTimer();
+  timerId = setInterval(()=>{
+    timeLeft--;
+    if(timeLeft<=5 && timeLeft>0) sfx.tick();
+    if(timeLeft<=0){ timeLeft=0; renderTimer(); endTurn(true); return; }
+    renderTimer();
+  },1000);
+}
+
+/* ---------- Turn flow ---------- */
+function syncChips(){
+  [0,1].forEach(i=>{
+    const chip=$('chip'+i);
+    chip.classList.toggle('active', i===currentTeam);
+    chip.querySelector('.tname').textContent = teams[i].name;
+    chip.querySelector('.tscore').textContent = teams[i].score;
+  });
+}
+function updatePassUI(){
+  $('passSub').textContent = passesLeft>0 ? `${passesLeft} hak kaldı` : 'hak bitti';
+  $('passesLeft').innerHTML = passesLeft>0 ? `Kalan pas: <b>${passesLeft}</b>` : 'Pas hakkın kalmadı';
+}
+function startTurn(){
+  passesLeft = settings.passes;
+  turnCorrect = 0; turnActive = true;
+  syncChips(); updatePassUI();
+  renderCard(nextCard());
+  show('game');
+  startTimer();
+  sfx.start();
+}
+function endTurn(){
+  if(!turnActive) return;
+  turnActive = false;
+  clearInterval(timerId);
+  // hedef puana ulaşıldı mı?
+  if(teams[0].score >= settings.target || teams[1].score >= settings.target){ endGame(); return; }
+  currentTeam = 1 - currentTeam;
+  syncChips();
+  $('interLabel').textContent = 'SÜRE BİTTİ — SIRA DEĞİŞTİ';
+  $('interTeam').textContent = teams[currentTeam].name;
+  $('interScore').textContent = `${teams[0].score} – ${teams[1].score}`;
+  show('inter');
+  vibrate(80);
+}
+function endGame(){
+  clearInterval(timerId);
+  const winnerIdx = teams[0].score===teams[1].score ? -1 : (teams[0].score>teams[1].score?0:1);
+  $('winnerName').textContent = winnerIdx===-1 ? 'BERABERE!' : teams[winnerIdx].name;
+  [0,1].forEach(i=>{
+    const box=$('finalBox'+i);
+    box.classList.toggle('win', i===winnerIdx);
+    box.querySelector('.fs-name').textContent = teams[i].name;
+    box.querySelector('.fs-num').textContent = teams[i].score;
+  });
+  $('overStats').textContent = `Toplam ${totalCorrect} doğru · ${totalBuzz} düdük · ${totalPass} pas`;
+  show('over');
+  const stats = loadStats(); stats.games++; stats.correct+=totalCorrect; stats.buzz+=totalBuzz; saveStats(stats);
+  renderMenuStats();
+  if(winnerIdx!==-1){ sfx.win(); launchConfetti(); } else { sfx.start(); }
+  vibrate([120,60,120,60,240]);
+}
+
+/* ---------- Buttons ---------- */
+$('okBtn').addEventListener('click',()=>{
+  if(!turnActive) return;
+  teams[currentTeam].score++; turnCorrect++; totalCorrect++;
+  sfx.correct(); vibrate(40);
+  syncChips(); renderCard(nextCard());
+});
+$('buzzBtn').addEventListener('click',()=>{
+  if(!turnActive) return;
+  teams[currentTeam].score = Math.max(0, teams[currentTeam].score-1); totalBuzz++;
+  sfx.buzz(); vibrate([150,80,150]);
+  const f=$('flash'); f.classList.add('show'); setTimeout(()=>f.classList.remove('show'),220);
+  syncChips(); renderCard(nextCard());
+});
+$('passBtn').addEventListener('click',()=>{
+  if(!turnActive) return;
+  if(passesLeft<=0){ toast('Pas hakkın kalmadı!'); return; }
+  passesLeft--; totalPass++;
+  sfx.pass(); updatePassUI(); renderCard(nextCard());
+});
+$('quitBtn').addEventListener('click',()=>{
+  clearInterval(timerId); turnActive=false; show('menu');
+});
+$('readyBtn').addEventListener('click',startTurn);
+$('rematchBtn').addEventListener('click',()=>{
+  teams[0].score=0; teams[1].score=0; currentTeam=0;
+  totalCorrect=0; totalBuzz=0; totalPass=0;
+  deck=buildDeck(); deckIdx=0;
+  startTurn();
+});
+$('menuBtn').addEventListener('click',()=>show('menu'));
+
+$('startBtn').addEventListener('click',()=>{
+  const n1=$('t1name').value.trim()||'Takım 1', n2=$('t2name').value.trim()||'Takım 2';
+  teams=[{name:n1,score:0},{name:n2,score:0}];
+  currentTeam=0; totalCorrect=0; totalBuzz=0; totalPass=0;
+  deck=buildDeck(); deckIdx=0;
+  $('interLabel').textContent='OYUN BAŞLIYOR';
+  $('interTeam').textContent=teams[0].name;
+  $('interScore').textContent='0 – 0';
+  syncChips(); show('inter');
+});
+
+/* toast */
+let toastTimer=null;
+function toast(msg){
+  const t=$('toast'); t.textContent=msg; t.classList.add('show');
+  clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove('show'),1800);
+}
+
+/* ---------- Swipe gestures on the card ---------- */
+(function(){
+  let sx=0, sy=0;
+  const zone=document.querySelector('.card-zone');
+  zone.addEventListener('touchstart',e=>{ sx=e.touches[0].clientX; sy=e.touches[0].clientY; },{passive:true});
+  zone.addEventListener('touchend',e=>{
+    const dx=e.changedTouches[0].clientX-sx, dy=e.changedTouches[0].clientY-sy;
+    if(Math.abs(dx)<45 && Math.abs(dy)<45) return;
+    if(Math.abs(dx)>=Math.abs(dy)){ dx>0 ? $('okBtn').click() : $('passBtn').click(); }
+    else if(dy>0){ $('buzzBtn').click(); }
+  },{passive:true});
+})();
+/* klavye (bilgisayar için): → doğru  ← pas  ↓ düdük */
+document.addEventListener('keydown',e=>{
+  if(screens.game.classList.contains('hidden')) return;
+  if(e.key==='ArrowRight') $('okBtn').click();
+  else if(e.key==='ArrowLeft') $('passBtn').click();
+  else if(e.key==='ArrowDown'){ e.preventDefault(); $('buzzBtn').click(); }
+});
+
+/* ---------- Confetti ---------- */
+function launchConfetti(){
+  const c=$('confetti'), ctx=c.getContext('2d');
+  const app=$('app'); c.width=app.clientWidth; c.height=app.clientHeight;
+  const colors=['#ffd32a','#ff4757','#2ed573','#7b2ff7','#4ad7ff','#ff9f2a','#ffffff'];
+  const N=140, P=[];
+  for(let i=0;i<N;i++){
+    P.push({x:Math.random()*c.width, y:-30-Math.random()*c.height*0.6, w:6+Math.random()*8, h:8+Math.random()*12,
+      vy:1.5+Math.random()*2.6, vx:(Math.random()-.5)*1.6, rot:Math.random()*Math.PI, vr:(Math.random()-.5)*0.12,
+      color:colors[(Math.random()*colors.length)|0]});
+  }
+  const start=performance.now();
+  function frame(t){
+    const el=(t-start)/1000;
+    ctx.clearRect(0,0,c.width,c.height);
+    let alive=0;
+    for(const p of P){
+      p.y+=p.vy; p.x+=p.vx; p.rot+=p.vr; if(p.y<c.height+20) alive++;
+      ctx.save(); ctx.translate(p.x,p.y); ctx.rotate(p.rot); ctx.fillStyle=p.color;
+      ctx.fillRect(-p.w/2,-p.h/2,p.w,p.h); ctx.restore();
+    }
+    if(alive>0 && el<9) requestAnimationFrame(frame); else ctx.clearRect(0,0,c.width,c.height);
+  }
+  requestAnimationFrame(frame);
+}
+</script>
+</body>
+</html>
