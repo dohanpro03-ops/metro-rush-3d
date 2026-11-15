@@ -15,3 +15,4 @@ props/signpost.glb — "Signpost"
 props/cone.glb — "Traffic Cone"
   By Quaternius — https://quaternius.com
   Licensed CC0 (public domain).
+inspector.glb — "Business Man" by Quaternius — https://quaternius.com — CC0 (public domain)
